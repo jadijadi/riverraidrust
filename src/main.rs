@@ -63,7 +63,7 @@ fn physics(mut world: World) -> Result<World>{
     }
     if world.next_right < world.map[0].1 {
         world.map[0].1 -= 1;
-    } 
+    }
     // TODO: below randoms may 1) go outside of range
     if world.next_left == world.map[0].0 && rng.gen_range(0..10) >= 7 {
         world.next_left = rng.gen_range(world.next_left-5..world.next_left+5)
@@ -108,18 +108,18 @@ fn main() -> std::io::Result<()> {
                     // I'm reading from keyboard into event
                     match event.code {
                         KeyCode::Char('q') => { break; },
-                        KeyCode::Char('w') => { 
+                        KeyCode::Char('w') => {
                             if world.player_l > 1 { world.player_l -= 1;}
                         },
-                        KeyCode::Char('s') => { 
+                        KeyCode::Char('s') => {
                             if world.player_l < maxl - 1 { world.player_l += 1;}
                         },
-                        KeyCode::Char('a') => { 
+                        KeyCode::Char('a') => {
                             if world.player_c > 1 { world.player_c -= 1;}
                         },
-                        KeyCode::Char('d') => { 
+                        KeyCode::Char('d') => {
                             if world.player_c < maxc - 1 { world.player_c += 1;}
-                        },                                                                        
+                        },
                         _ => {}
                     }
                 }
@@ -138,8 +138,10 @@ fn main() -> std::io::Result<()> {
 
     // game is finished
     sc.queue(Clear(crossterm::terminal::ClearType::All))?;
-    sc.queue(MoveTo(0, 3))?;
+    sc.queue(MoveTo(maxc / 2, maxl / 2))?;
     sc.queue(Print("Good game! Thanks.\n"))?;
+    thread::sleep(time::Duration::from_millis(3000));
+    sc.queue(Clear(crossterm::terminal::ClearType::All))?;
     sc.execute(Show)?;
     disable_raw_mode()?;
     Ok(())
