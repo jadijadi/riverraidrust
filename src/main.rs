@@ -15,6 +15,7 @@ struct World {
     died: bool, // TODO: create enum with died, playing, animation, paused
     next_right: u16,
     next_left: u16,
+    ship: String
 }
 
 
@@ -31,7 +32,7 @@ fn draw(mut sc: &Stdout, world: &World) -> std::io::Result<()> {
 
     // draw the player
     sc.queue(MoveTo(world.player_c, world.player_l))?;
-    sc.queue(Print("P"))?;
+    sc.queue(Print(world.ship.as_str()))?;
 
     sc.flush()?;
 
@@ -95,6 +96,7 @@ fn main() -> std::io::Result<()> {
         died: false,
         next_left: maxc / 2 - 7,
         next_right: maxc / 2 + 7,
+        ship: '⛵'.to_string()
     };
 
     while !world.died {
