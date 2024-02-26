@@ -3,7 +3,7 @@ use std::{thread, time};
 use rand::{thread_rng, Rng};
 
 use crossterm::{
-    cursor::{Hide, MoveTo, Show}, event::{self, poll, read, Event, KeyCode}, execute, style::{Color, Print, ResetColor, SetBackgroundColor, SetForegroundColor}, terminal::{disable_raw_mode, enable_raw_mode, size, Clear}, ExecutableCommand, QueueableCommand
+    cursor::{Hide, MoveTo, Show}, event::{self, poll, read, Event, KeyCode, KeyEventKind}, execute, style::{Color, Print, ResetColor, SetBackgroundColor, SetForegroundColor}, terminal::{disable_raw_mode, enable_raw_mode, size, Clear}, ExecutableCommand, QueueableCommand
 };
 
 struct World {
@@ -105,6 +105,7 @@ fn main() -> std::io::Result<()> {
             }
             match key {
                 Event::Key(event) => {
+                    if event.kind == KeyEventKind::Press{
                     // I'm reading from keyboard into event
                     match event.code {
                         KeyCode::Char('q') => { break; },
@@ -121,7 +122,7 @@ fn main() -> std::io::Result<()> {
                             if world.player_c < maxc - 1 { world.player_c += 1;}
                         },                                                                        
                         _ => {}
-                    }
+                    }}
                 }
                 _ => {}
             }
