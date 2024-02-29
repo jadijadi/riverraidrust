@@ -23,6 +23,7 @@ struct World {
     status: PlayerStatus,
     next_right: u16,
     next_left: u16,
+    ship: String
 }
 
 impl World {
@@ -37,6 +38,7 @@ impl World {
             status: PlayerStatus::Alive,
             next_left: maxc / 2 - 7,
             next_right: maxc / 2 + 7,
+            ship: '⛵'.to_string(),
         }
     }
 
@@ -55,7 +57,7 @@ fn draw(mut sc: &Stdout, world: &World) -> std::io::Result<()> {
 
     // draw the player
     sc.queue(MoveTo(world.player_c, world.player_l))?
-        .queue(Print("P"))?
+        .queue(Print(world.ship.as_str()))?
         .flush()?;
 
     Ok(())
@@ -147,10 +149,12 @@ fn main() -> std::io::Result<()> {
     }
 
     // game is finished
-    sc.queue(Clear(crossterm::terminal::ClearType::All))?
-        .queue(MoveTo(0, 3))?
-        .queue(Print("Good game! Thanks.\n"))?
-        .execute(Show)?;
-    disable_raw_mode()?;
+
+    sc.queue(Clear(crossterm::terminal::ClearType::All))?;
+    sc.queue(MoveTo(maxc / 2, maxl / 2))?;
+    sc.queue(Print("Good game! Thanks.\n"))?;
+    thread::sleep(time::Duration::from_millis(3000));
+    sc.queue(Clear(crossterm::terminal::ClearType::All))?;
+    sc.execute(Show)?;
     Ok(())
 }
