@@ -14,6 +14,17 @@ enum PlayerStatus {
     Paused
 }
 
+struct Enemy {
+    c: u16,
+    l: u16
+}
+
+struct Bullet {
+    c: u16,
+    l: u16,
+    energy: u16,
+}
+
 struct World {
     player_c: u16,
     player_l: u16,
@@ -23,7 +34,9 @@ struct World {
     status: PlayerStatus,
     next_right: u16,
     next_left: u16,
-    ship: String
+    ship: String,
+    enemy: Vec<Enemy>,
+    bullet: Vec<Bullet>,
 }
 
 impl World {
@@ -38,7 +51,9 @@ impl World {
             status: PlayerStatus::Alive,
             next_left: maxc / 2 - 7,
             next_right: maxc / 2 + 7,
-            ship: '⛵'.to_string(),
+            ship: 'P'.to_string(),
+            enemy: vec![],
+            bullet: vec![],
         }
     }
 
@@ -53,6 +68,20 @@ fn draw(mut sc: &Stdout, world: &World) -> std::io::Result<()> {
             .queue(Print("+".repeat(world.map[l].0 as usize)))?
             .queue(MoveTo(world.map[l].1, l as u16))?
             .queue(Print("+".repeat((world.maxc - world.map[l].1) as usize)))?;
+    }
+
+    // draw enemies
+    for e in &world.enemy {
+        sc.queue(MoveTo(e.c, e.l))?
+        .queue(Print("E"))?;       
+    }
+
+    // draw bullet
+    for b in &world.bullet {
+        sc.queue(MoveTo(b.c, b.l))?
+            .queue(Print("|"))?
+            .queue(MoveTo(b.c, b.l-1))?
+            .queue(Print("^"))?;
     }
 
     // draw the player
@@ -71,6 +100,19 @@ fn physics(world: &mut World) {
     if world.player_c < world.map[world.player_l as usize].0 ||
         world.player_c >= world.map[world.player_l as usize].1 {
         world.status = PlayerStatus::Dead;
+    }
+
+    // check enemy hit something
+    for i in (0..world.enemy.len()).rev() {
+        if world.enemy[i].l == world.player_l && world.enemy[i].c == world.player_c {
+            world.status = PlayerStatus::Dead
+        };
+        for j in (0..world.bullet.len()).rev() {
+            if (world.enemy[i].l.abs_diff(world.bullet[j].l) <= 1) 
+                && world.enemy[i].c == world.bullet[j].c {
+                world.enemy.remove(i);
+            }
+        }
     }
 
     // move the map downward
@@ -101,6 +143,34 @@ fn physics(world: &mut World) {
     if world.next_right.abs_diff(world.next_left) < 3 {
         world.next_right += 3;
     }
+
+    // create a new enemy; maybe
+    if rng.gen_range(0..10) >= 9 {
+        let new_enemy = Enemy {
+            l: 0,
+            c: rng.gen_range(world.map[0].0..world.map[0].1)
+        };
+        world.enemy.push(new_enemy);
+    }
+
+    // move enemies on the river
+    for i in (0..world.enemy.len()).rev() {
+        world.enemy[i].l += 1;
+        if world.enemy[i].l >= world.maxl {
+            world.enemy.remove(i);
+        }
+    }
+
+    // move the bullets
+    for i in (0..world.bullet.len()).rev() {
+        if world.bullet[i].energy == 0 || world.bullet[i].l <= 2{
+            world.bullet.remove(i);
+        } else {
+            world.bullet[i].l -= 2;
+            world.bullet[i].energy -= 1;
+        }
+    }    
+
 }
 
 fn main() -> std::io::Result<()> {
@@ -135,6 +205,14 @@ fn main() -> std::io::Result<()> {
                         KeyCode::Down => if world.player_l < maxl - 1 { world.player_l += 1 },
                         KeyCode::Left => if world.player_c > 1 { world.player_c -= 1 },
                         KeyCode::Right => if world.player_c < maxc - 1 { world.player_c += 1},
+                        KeyCode::Char(' ') => if world.bullet.len() == 0 {
+                            let bullet = Bullet {
+                                c: world.player_c,
+                                l: world.player_l-1,
+                                energy: world.maxl / 4,
+                            };
+                            world.bullet.push(bullet);
+                        },
                         _ => {}
                     }
                 }
