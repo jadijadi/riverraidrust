@@ -1,11 +1,8 @@
 use std::{cmp::Ordering::*, io::{stdout, Stdout, Write}, time::Duration};
 use std::{thread, time};
-<<<<<<< HEAD
 use rand::{thread_rng, Rng};
 use std::num::Wrapping;
-=======
 use rand::{rngs::ThreadRng, thread_rng, Rng};
->>>>>>> 9056387 (Breaking-down the physics function)
 
 use crossterm::{
     cursor::{Hide, MoveTo, Show}, event::{poll, read, Event, KeyCode}, style::Print, terminal::{enable_raw_mode, size, Clear}, ExecutableCommand, QueueableCommand
@@ -288,6 +285,39 @@ fn physics(world: &mut World) {
     move_bullets(world);
 }
 
+fn handle_pressed_keys(world: &mut World) {
+    if poll(Duration::from_millis(10)).unwrap() {
+        let key = read().unwrap();
+
+        while poll(Duration::from_millis(0)).unwrap() {
+            let _ = read();
+        }
+
+        match key {
+            Event::Key(event) => {
+                // I'm reading from keyboard into event
+                match event.code {
+                    KeyCode::Char('q') => world.status = PlayerStatus::Paused,
+                    KeyCode::Char('w') => if world.player_l > 1 { world.player_l -= 1 },
+                    KeyCode::Char('s') => if world.player_l < world.maxl - 1 { world.player_l += 1 },
+                    KeyCode::Char('a') => if world.player_c > 1 { world.player_c -= 1 },
+                    KeyCode::Char('d') => if world.player_c < world.maxc - 1 { world.player_c += 1},
+                    KeyCode::Up => if world.player_l > 1 { world.player_l -= 1 },
+                    KeyCode::Down => if world.player_l < world.maxl - 1 { world.player_l += 1 },
+                    KeyCode::Left => if world.player_c > 1 { world.player_c -= 1 },
+                    KeyCode::Right => if world.player_c < world.maxc - 1 { world.player_c += 1},
+                    KeyCode::Char(' ') => if world.bullet.is_empty() {
+                        let new_bullet = Bullet::new(world.player_c, world.player_l - 1, world.maxl / 4);
+                        world.bullet.push(new_bullet);
+                    },
+                    _ => {}
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
 fn main() -> std::io::Result<()> {
     // init the screen
     let mut sc = stdout();
@@ -303,37 +333,8 @@ fn main() -> std::io::Result<()> {
     welcome_screen(&sc, &world);
 
     while world.status == PlayerStatus::Alive {
-        if poll(Duration::from_millis(10))? {
-            let key = read().unwrap();
-
-            while poll(Duration::from_millis(0)).unwrap() {
-                let _ = read();
-            }
-
-            match key {
-                Event::Key(event) => {
-                    // I'm reading from keyboard into event
-                    match event.code {
-                        KeyCode::Char('q') => break,
-                        KeyCode::Char('w') => if world.player_l > 1 { world.player_l -= 1 },
-                        KeyCode::Char('s') => if world.player_l < maxl - 1 { world.player_l += 1 },
-                        KeyCode::Char('a') => if world.player_c > 1 { world.player_c -= 1 },
-                        KeyCode::Char('d') => if world.player_c < maxc - 1 { world.player_c += 1},
-                        KeyCode::Up => if world.player_l > 1 { world.player_l -= 1 },
-                        KeyCode::Down => if world.player_l < maxl - 1 { world.player_l += 1 },
-                        KeyCode::Left => if world.player_c > 1 { world.player_c -= 1 },
-                        KeyCode::Right => if world.player_c < maxc - 1 { world.player_c += 1},
-                        KeyCode::Char(' ') => if world.bullet.is_empty() {
-                            let new_bullet = Bullet::new(world.player_c, world.player_l - 1, world.maxl / 4);
-                            world.bullet.push(new_bullet);
-                        },
-                        _ => {}
-                    }
-                }
-                _ => {}
-            }
-        }
-
+        
+        handle_pressed_keys(&mut world);
         physics(&mut world);
         draw(&sc, &world)?;
 
@@ -344,6 +345,7 @@ fn main() -> std::io::Result<()> {
 
     sc.queue(Clear(crossterm::terminal::ClearType::All))?;
     goodbye_screen(&sc, &world);
+    
     sc.queue(Clear(crossterm::terminal::ClearType::All))?
         .execute(Show)?;    
     Ok(())
