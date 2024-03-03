@@ -3,7 +3,7 @@ use std::{thread, time};
 use rand::{thread_rng, Rng};
 
 use crossterm::{
-    cursor::{Hide, MoveTo, Show}, event::{poll, read, Event, KeyCode}, style::Print, terminal::{disable_raw_mode, enable_raw_mode, size, Clear}, ExecutableCommand, QueueableCommand
+    cursor::{Hide, MoveTo, Show}, event::{poll, read, Event, KeyCode}, style::Print, terminal::{enable_raw_mode, size, Clear}, ExecutableCommand, QueueableCommand
 };
 
 #[derive(PartialEq, Eq)]
@@ -23,6 +23,18 @@ struct Bullet {
     c: u16,
     l: u16,
     energy: u16,
+}
+
+impl Bullet {
+    
+    fn new(column: u16, line: u16, energy: u16) -> Bullet {
+        Bullet {
+            c: column,
+            l: line,
+            energy
+        }
+    }
+
 }
 
 struct World {
@@ -52,8 +64,8 @@ impl World {
             next_left: maxc / 2 - 7,
             next_right: maxc / 2 + 7,
             ship: 'P'.to_string(),
-            enemy: vec![],
-            bullet: vec![],
+            enemy: Vec::new(),
+            bullet: Vec::new(),
         }
     }
 
@@ -205,13 +217,9 @@ fn main() -> std::io::Result<()> {
                         KeyCode::Down => if world.player_l < maxl - 1 { world.player_l += 1 },
                         KeyCode::Left => if world.player_c > 1 { world.player_c -= 1 },
                         KeyCode::Right => if world.player_c < maxc - 1 { world.player_c += 1},
-                        KeyCode::Char(' ') => if world.bullet.len() == 0 {
-                            let bullet = Bullet {
-                                c: world.player_c,
-                                l: world.player_l-1,
-                                energy: world.maxl / 4,
-                            };
-                            world.bullet.push(bullet);
+                        KeyCode::Char(' ') => if world.bullet.is_empty() {
+                            let new_bullet = Bullet::new(world.player_c, world.player_l - 1, world.maxl / 4);
+                            world.bullet.push(new_bullet);
                         },
                         _ => {}
                     }
@@ -228,11 +236,11 @@ fn main() -> std::io::Result<()> {
 
     // game is finished
 
-    sc.queue(Clear(crossterm::terminal::ClearType::All))?;
-    sc.queue(MoveTo(maxc / 2, maxl / 2))?;
-    sc.queue(Print("Good game! Thanks.\n"))?;
+    sc.queue(Clear(crossterm::terminal::ClearType::All))?
+        .queue(MoveTo(maxc / 2, maxl / 2))?
+        .queue(Print("Good game! Thanks.\n"))?;
     thread::sleep(time::Duration::from_millis(3000));
-    sc.queue(Clear(crossterm::terminal::ClearType::All))?;
-    sc.execute(Show)?;
+    sc.queue(Clear(crossterm::terminal::ClearType::All))?
+        .execute(Show)?;
     Ok(())
 }
