@@ -64,6 +64,19 @@ impl World {
 
 }
 
+fn hit_margin(loc1: &Location,loc2: &Location, l_margin:u16, c_margin:u16) -> bool{
+    return 
+    (loc1.c == loc2.c && loc1.l == loc2.l) || 
+    (loc1.c + c_margin == loc2.c && loc1.l == loc2.l) || 
+    (loc1.c == loc2.c && loc1.l + l_margin == loc2.l) ||
+    (loc1.c - c_margin == loc2.c && loc1.l == loc2.l) || 
+    (loc1.c == loc2.c && loc1.l - l_margin == loc2.l) 
+    ;
+}
+fn hit(loc1: &Location,loc2: &Location) -> bool{
+    return loc1.c == loc2.c && loc1.l == loc2.l;
+}
+
 fn draw(mut sc: &Stdout, world: &World) -> std::io::Result<()> {
     sc.queue(Clear(crossterm::terminal::ClearType::All))?;
 
@@ -105,16 +118,18 @@ fn physics(world: &mut World) {
     if world.player_location.c < world.map[world.player_location.l as usize].0 ||
         world.player_location.c >= world.map[world.player_location.l as usize].1 {
         world.status = PlayerStatus::Dead;
+        return;
     }
 
     // check enemy hit something
     for i in (0..world.enemy.len()).rev() {
-        if world.enemy[i].location.l == world.player_location.l && world.enemy[i].location.c == world.player_location.c {
-            world.status = PlayerStatus::Dead
+        if hit(&world.enemy[i].location,&world.player_location) {
+            world.status = PlayerStatus::Dead;
+            return;
         };
         for j in (0..world.bullet.len()).rev() {
-            if (world.enemy[i].location.l.abs_diff(world.bullet[j].location.l) <= 1) 
-                && world.enemy[i].location.c == world.bullet[j].location.c {
+            
+            if hit_margin(&world.enemy[i].location,&world.bullet[j].location,1,0) {
                 world.enemy.remove(i);
             }
         }
