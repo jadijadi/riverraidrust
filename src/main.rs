@@ -14,20 +14,23 @@ enum PlayerStatus {
     Paused
 }
 
-struct Enemy {
+
+struct Location {
     c: u16,
     l: u16
 }
 
+struct Enemy {
+    location: Location
+}
+
 struct Bullet {
-    c: u16,
-    l: u16,
+    location: Location,
     energy: u16,
 }
 
 struct World {
-    player_c: u16,
-    player_l: u16,
+    player_location: Location,
     map: Vec<(u16, u16)>,
     maxc: u16,
     maxl: u16,
@@ -43,8 +46,10 @@ impl World {
 
     fn new (maxc: u16, maxl: u16) -> World {
         World {
-            player_c: maxc / 2,
-            player_l: maxl - 1,
+            player_location: Location{
+                c: maxc / 2,
+                l: maxl - 1
+            },
             map: vec![(maxc/2-5, maxc/2+5); maxl as usize],
             maxc,
             maxl,
@@ -72,20 +77,20 @@ fn draw(mut sc: &Stdout, world: &World) -> std::io::Result<()> {
 
     // draw enemies
     for e in &world.enemy {
-        sc.queue(MoveTo(e.c, e.l))?
+        sc.queue(MoveTo(e.location.c, e.location.l))?
         .queue(Print("E"))?;       
     }
 
     // draw bullet
     for b in &world.bullet {
-        sc.queue(MoveTo(b.c, b.l))?
+        sc.queue(MoveTo(b.location.c, b.location.l))?
             .queue(Print("|"))?
-            .queue(MoveTo(b.c, b.l-1))?
+            .queue(MoveTo(b.location.c, b.location.l-1))?
             .queue(Print("^"))?;
     }
 
     // draw the player
-    sc.queue(MoveTo(world.player_c, world.player_l))?
+    sc.queue(MoveTo(world.player_location.c, world.player_location.l))?
         .queue(Print(world.ship.as_str()))?
         .flush()?;
 
@@ -97,19 +102,19 @@ fn physics(world: &mut World) {
     let mut rng = thread_rng();
 
     // check if player hit the ground
-    if world.player_c < world.map[world.player_l as usize].0 ||
-        world.player_c >= world.map[world.player_l as usize].1 {
+    if world.player_location.c < world.map[world.player_location.l as usize].0 ||
+        world.player_location.c >= world.map[world.player_location.l as usize].1 {
         world.status = PlayerStatus::Dead;
     }
 
     // check enemy hit something
     for i in (0..world.enemy.len()).rev() {
-        if world.enemy[i].l == world.player_l && world.enemy[i].c == world.player_c {
+        if world.enemy[i].location.l == world.player_location.l && world.enemy[i].location.c == world.player_location.c {
             world.status = PlayerStatus::Dead
         };
         for j in (0..world.bullet.len()).rev() {
-            if (world.enemy[i].l.abs_diff(world.bullet[j].l) <= 1) 
-                && world.enemy[i].c == world.bullet[j].c {
+            if (world.enemy[i].location.l.abs_diff(world.bullet[j].location.l) <= 1) 
+                && world.enemy[i].location.c == world.bullet[j].location.c {
                 world.enemy.remove(i);
             }
         }
@@ -147,26 +152,28 @@ fn physics(world: &mut World) {
     // create a new enemy; maybe
     if rng.gen_range(0..10) >= 9 {
         let new_enemy = Enemy {
-            l: 0,
-            c: rng.gen_range(world.map[0].0..world.map[0].1)
+            location: Location{
+                l: 0,
+                c: rng.gen_range(world.map[0].0..world.map[0].1)
+            }
         };
         world.enemy.push(new_enemy);
     }
 
     // move enemies on the river
     for i in (0..world.enemy.len()).rev() {
-        world.enemy[i].l += 1;
-        if world.enemy[i].l >= world.maxl {
+        world.enemy[i].location.l += 1;
+        if world.enemy[i].location.l >= world.maxl {
             world.enemy.remove(i);
         }
     }
 
     // move the bullets
     for i in (0..world.bullet.len()).rev() {
-        if world.bullet[i].energy == 0 || world.bullet[i].l <= 2{
+        if world.bullet[i].energy == 0 || world.bullet[i].location.l <= 2{
             world.bullet.remove(i);
         } else {
-            world.bullet[i].l -= 2;
+            world.bullet[i].location.l -= 2;
             world.bullet[i].energy -= 1;
         }
     }    
@@ -184,7 +191,8 @@ fn main() -> std::io::Result<()> {
     let slowness = 100;
     let mut world = World::new(maxc, maxl);
 
-    while world.status == PlayerStatus::Alive {
+    while world.status == PlayerStatus::Alive || world.status == PlayerStatus::Paused {
+
         if poll(Duration::from_millis(10))? {
             let key = read().unwrap();
 
@@ -197,18 +205,24 @@ fn main() -> std::io::Result<()> {
                     // I'm reading from keyboard into event
                     match event.code {
                         KeyCode::Char('q') => break,
-                        KeyCode::Char('w') => if world.player_l > 1 { world.player_l -= 1 },
-                        KeyCode::Char('s') => if world.player_l < maxl - 1 { world.player_l += 1 },
-                        KeyCode::Char('a') => if world.player_c > 1 { world.player_c -= 1 },
-                        KeyCode::Char('d') => if world.player_c < maxc - 1 { world.player_c += 1},
-                        KeyCode::Up => if world.player_l > 1 { world.player_l -= 1 },
-                        KeyCode::Down => if world.player_l < maxl - 1 { world.player_l += 1 },
-                        KeyCode::Left => if world.player_c > 1 { world.player_c -= 1 },
-                        KeyCode::Right => if world.player_c < maxc - 1 { world.player_c += 1},
-                        KeyCode::Char(' ') => if world.bullet.len() == 0 {
+                        KeyCode::Char('w') => if world.status != PlayerStatus::Paused && world.player_location.l > 1 { world.player_location.l -= 1 },
+                        KeyCode::Char('s') => if world.status != PlayerStatus::Paused && world.player_location.l < maxl - 1 { world.player_location.l += 1 },
+                        KeyCode::Char('a') => if world.status != PlayerStatus::Paused && world.player_location.c > 1 { world.player_location.c -= 1 },
+                        KeyCode::Char('d') => if world.status != PlayerStatus::Paused && world.player_location.c < maxc - 1 { world.player_location.c += 1},
+                        KeyCode::Up => if world.status != PlayerStatus::Paused && world.player_location.l > 1 { world.player_location.l -= 1 },
+                        KeyCode::Down => if world.status != PlayerStatus::Paused && world.player_location.l < maxl - 1 { world.player_location.l += 1 },
+                        KeyCode::Left => if world.status != PlayerStatus::Paused && world.player_location.c > 1 { world.player_location.c -= 1 },
+                        KeyCode::Right => if world.status != PlayerStatus::Paused && world.player_location.c < maxc - 1 { world.player_location.c += 1},
+                        KeyCode::Char('p') => {
+                            if world.status == PlayerStatus::Alive { world.status = PlayerStatus::Paused; }
+                            else if world.status == PlayerStatus::Paused { world.status = PlayerStatus::Alive; }
+                        },
+                        KeyCode::Char(' ') => if world.status != PlayerStatus::Paused && world.bullet.len() == 0 {
                             let bullet = Bullet {
-                                c: world.player_c,
-                                l: world.player_l-1,
+                                location: Location{
+                                    c: world.player_location.c,
+                                    l: world.player_location.l - 1,
+                                },
                                 energy: world.maxl / 4,
                             };
                             world.bullet.push(bullet);
@@ -220,9 +234,11 @@ fn main() -> std::io::Result<()> {
             }
         }
 
-        physics(&mut world);
-        draw(&sc, &world)?;
-
+        if world.status != PlayerStatus::Paused
+        {
+            physics(&mut world);
+            draw(&sc, &world)?;
+        }
         thread::sleep(time::Duration::from_millis(slowness));
     }
 
