@@ -1,6 +1,7 @@
 use std::{cmp::Ordering::*, io::{stdout, Stdout, Write}, time::Duration};
 use std::{thread, time};
 use rand::{thread_rng, Rng};
+use std::num::Wrapping;
 
 use crossterm::{
     cursor::{Hide, MoveTo, Show}, event::{poll, read, Event, KeyCode}, style::Print, terminal::{disable_raw_mode, enable_raw_mode, size, Clear}, ExecutableCommand, QueueableCommand
@@ -132,12 +133,17 @@ fn physics(world: &mut World) {
         Equal => {},
     };
 
-    // TODO: below randoms may 1) go outside of range
-    if world.next_left == world.map[0].0 && rng.gen_range(0..10) >= 7 {
-        world.next_left = rng.gen_range(world.next_left-5..world.next_left+5)
+    if world.next_left == world.map[0].0 && rng.gen_range(0..10) >= 7  {
+        world.next_left = rng.gen_range(world.next_left.saturating_sub(5)..world.next_left+5);
+        if world.next_left == 0 {
+            world.next_left = 1;
+        }
     }
     if world.next_right == world.map[0].1 && rng.gen_range(0..10) >= 7  {
-        world.next_right = rng.gen_range(world.next_right-5..world.next_right+5)
+        world.next_right = rng.gen_range(world.next_right-5..world.next_right+5);
+        if world.next_right > world.maxc {
+            world.next_right = Wrapping(world.maxc).0 - 1;
+        }
     }
 
     if world.next_right.abs_diff(world.next_left) < 3 {
