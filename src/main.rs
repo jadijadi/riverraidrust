@@ -1,10 +1,9 @@
 use std::{cmp::Ordering::*, io::{stdout, Stdout, Write}, time::Duration};
 use std::{thread, time};
-use std::num::Wrapping;
-use rand::{rngs::ThreadRng, thread_rng, Rng};
+use rand::{thread_rng, Rng};
 
 use crossterm::{
-    cursor::{Hide, MoveTo, Show}, event::{poll, read, Event, KeyCode}, style::Print, terminal::{enable_raw_mode, size, Clear}, ExecutableCommand, QueueableCommand
+    cursor::{Hide, MoveTo, Show}, event::{poll, read, Event, KeyCode}, style::Print, terminal::{disable_raw_mode, enable_raw_mode, size, Clear}, ExecutableCommand, QueueableCommand
 };
 
 #[derive(PartialEq, Eq)]
@@ -21,32 +20,13 @@ struct Location {
     l: u16
 }
 
-impl Enemy {
-
-    fn new(column: u16, line: u16) -> Enemy {
-        Enemy {
-            c: column,
-            l: line
-        }
-    }
-    
+struct Enemy {
+    location: Location
 }
 
 struct Bullet {
     location: Location,
     energy: u16,
-}
-
-impl Bullet {
-    
-    fn new(column: u16, line: u16, energy: u16) -> Bullet {
-        Bullet {
-            c: column,
-            l: line,
-            energy
-        }
-    }
-
 }
 
 struct World {
@@ -77,8 +57,8 @@ impl World {
             next_left: maxc / 2 - 7,
             next_right: maxc / 2 + 7,
             ship: 'P'.to_string(),
-            enemy: Vec::new(),
-            bullet: Vec::new(),
+            enemy: vec![],
+            bullet: vec![],
         }
     }
 
@@ -130,39 +110,31 @@ fn draw(mut sc: &Stdout, world: &World) -> std::io::Result<()> {
     Ok(())
 }
 
-/// check if player hit the ground
-fn check_player_status(world: &mut World) {
 
-    if world.player_c < world.map[world.player_l as usize].0 ||
-        world.player_c >= world.map[world.player_l as usize].1 {
+fn physics(world: &mut World) {
+    let mut rng = thread_rng();
+
+    // check if player hit the ground
+    if world.player_location.c < world.map[world.player_location.l as usize].0 ||
+        world.player_location.c >= world.map[world.player_location.l as usize].1 {
         world.status = PlayerStatus::Dead;
         return;
     }
 
-}
-
-/// check enemy hit something
-fn check_enemy_status(world: &mut World) {
-
-    for index in (0..world.enemy.len()).rev() {
-
-        if world.enemy[index].l == world.player_l && world.enemy[index].c == world.player_c {
-            world.status = PlayerStatus::Dead
+    // check enemy hit something
+    for i in (0..world.enemy.len()).rev() {
+        if hit(&world.enemy[i].location,&world.player_location) {
+            world.status = PlayerStatus::Dead;
+            return;
         };
-
-        // 
         for j in (0..world.bullet.len()).rev() {
-            if (world.enemy[index].l.abs_diff(world.bullet[j].l) <= 1) 
-                && world.enemy[index].c == world.bullet[j].c {
-                world.enemy.remove(index);
+            
+            if hit_margin(&world.enemy[i].location,&world.bullet[j].location,1,0) {
+                world.enemy.remove(i);
             }
         }
     }
 
-}
-
-/// Update the map
-fn update_map(rng: &mut ThreadRng, world: &mut World) {
     // move the map downward
     for l in (1..world.map.len()).rev() {
         world.map[l] = world.map[l - 1];
@@ -180,251 +152,47 @@ fn update_map(rng: &mut ThreadRng, world: &mut World) {
         Equal => {},
     };
 
-    if world.next_left == world.map[0].0 && rng.gen_range(0..10) >= 7  {
-        world.next_left = rng.gen_range(world.next_left.saturating_sub(5)..world.next_left+5);
-        if world.next_left == 0 {
-            world.next_left = 1;
-        }
+    // TODO: below randoms may 1) go outside of range
+    if world.next_left == world.map[0].0 && rng.gen_range(0..10) >= 7 {
+        world.next_left = rng.gen_range(world.next_left-5..world.next_left+5)
     }
     if world.next_right == world.map[0].1 && rng.gen_range(0..10) >= 7  {
-        world.next_right = rng.gen_range(world.next_right-5..world.next_right+5);
-        if world.next_right > world.maxc {
-            world.next_right = Wrapping(world.maxc).0 - 1;
-        }
+        world.next_right = rng.gen_range(world.next_right-5..world.next_right+5)
     }
 
     if world.next_right.abs_diff(world.next_left) < 3 {
         world.next_right += 3;
     }
-}
 
-/// Create a new enemy
-fn create_enemy(rng: &mut ThreadRng, world: &mut World) {
-
-    // Possibility
+    // create a new enemy; maybe
     if rng.gen_range(0..10) >= 9 {
-        world.enemy.push(
-            Enemy::new(
-                rng.gen_range(world.map[0].0..world.map[0].1),
-                0,
-            )
-        );
+        let new_enemy = Enemy {
+            location: Location{
+                l: 0,
+                c: rng.gen_range(world.map[0].0..world.map[0].1)
+            }
+        };
+        world.enemy.push(new_enemy);
     }
 
-}
-
-/// Move enemies on the river
-fn move_enemies(world: &mut World) {
-
-    for index in (0..world.enemy.len()).rev() {
-
-        world.enemy[index].l += 1;
-        if world.enemy[index].l >= world.maxl {
-            world.enemy.remove(index);
+    // move enemies on the river
+    for i in (0..world.enemy.len()).rev() {
+        world.enemy[i].location.l += 1;
+        if world.enemy[i].location.l >= world.maxl {
+            world.enemy.remove(i);
         }
-
     }
 
-}
-
-/// Move Bullets
-fn move_bullets(world: &mut World) {
-
-    for index in (0..world.bullet.len()).rev() {
-        if world.bullet[index].energy == 0 || world.bullet[index].l <= 2{
-            world.bullet.remove(index);
+    // move the bullets
+    for i in (0..world.bullet.len()).rev() {
+        if world.bullet[i].energy == 0 || world.bullet[i].location.l <= 2{
+            world.bullet.remove(i);
         } else {
-            world.bullet[index].l -= 2;
-            world.bullet[index].energy -= 1;
+            world.bullet[i].location.l -= 2;
+            world.bullet[i].energy -= 1;
         }
-    }   
+    }    
 
-}
-
-fn welcome_screen(mut sc: &Stdout, world: &World) {
-    let welcome_msg: &str = "██████╗ ██╗██╗   ██╗███████╗██████╗ ██████╗  █████╗ ██╗██████╗     ██████╗ ██╗   ██╗███████╗████████╗\n\r██╔══██╗██║██║   ██║██╔════╝██╔══██╗██╔══██╗██╔══██╗██║██╔══██╗    ██╔══██╗██║   ██║██╔════╝╚══██╔══╝\n\r██████╔╝██║██║   ██║█████╗  ██████╔╝██████╔╝███████║██║██║  ██║    ██████╔╝██║   ██║███████╗   ██║   \n\r██╔══██╗██║╚██╗ ██╔╝██╔══╝  ██╔══██╗██╔══██╗██╔══██║██║██║  ██║    ██╔══██╗██║   ██║╚════██║   ██║   \n\r██║  ██║██║ ╚████╔╝ ███████╗██║  ██║██║  ██║██║  ██║██║██████╔╝    ██║  ██║╚██████╔╝███████║   ██║   \n\r╚═╝  ╚═╝╚═╝  ╚═══╝  ╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝╚═════╝     ╚═╝  ╚═╝ ╚═════╝ ╚══════╝   ╚═╝   \n";
-    let _ = sc.queue(Clear(crossterm::terminal::ClearType::All));
-    let _ = sc.queue(MoveTo(0, 2));
-    let _ = sc.queue(Print(welcome_msg));
-    let _ = sc.queue(MoveTo(2, world.maxl -2));
-    let _ = sc.queue(Print("Press any key to continue..."));
-    let _ = sc.flush();
-    loop {
-        if poll(Duration::from_millis(0)).unwrap() {
-            let _ = read();
-            break;
-        }
-    }
-    let _ = sc.queue(Clear(crossterm::terminal::ClearType::All));
-}
-
-
-fn goodbye_screen(mut sc: &Stdout, world: &World) {
-    let goodbye_msg1: &str = " ██████╗  ██████╗  ██████╗ ██████╗      ██████╗  █████╗ ███╗   ███╗███████╗██╗\n\r██╔════╝ ██╔═══██╗██╔═══██╗██╔══██╗    ██╔════╝ ██╔══██╗████╗ ████║██╔════╝██║\n\r██║  ███╗██║   ██║██║   ██║██║  ██║    ██║  ███╗███████║██╔████╔██║█████╗  ██║\n\r██║   ██║██║   ██║██║   ██║██║  ██║    ██║   ██║██╔══██║██║╚██╔╝██║██╔══╝  ╚═╝\n\r╚██████╔╝╚██████╔╝╚██████╔╝██████╔╝    ╚██████╔╝██║  ██║██║ ╚═╝ ██║███████╗██╗\n\r ╚═════╝  ╚═════╝  ╚═════╝ ╚═════╝      ╚═════╝ ╚═╝  ╚═╝╚═╝     ╚═╝╚══════╝╚═╝\n";
-    let goodbye_msg2: &str = "████████╗██╗  ██╗ █████╗ ███╗   ██╗██╗  ██╗███████╗\n\r╚══██╔══╝██║  ██║██╔══██╗████╗  ██║██║ ██╔╝██╔════╝\n\r   ██║   ███████║███████║██╔██╗ ██║█████╔╝ ███████╗\n\r   ██║   ██╔══██║██╔══██║██║╚██╗██║██╔═██╗ ╚════██║\n\r   ██║   ██║  ██║██║  ██║██║ ╚████║██║  ██╗███████║██╗\n\r   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝╚══════╝╚═╝\n";
-    let _ = sc.queue(Clear(crossterm::terminal::ClearType::All));
-    let _ = sc.queue(MoveTo(0, 2));
-    let _ = sc.queue(Print(goodbye_msg1));
-    let _ = sc.queue(MoveTo(0, 10));
-    let _ = sc.queue(Print(goodbye_msg2));
-    let _ = sc.queue(MoveTo(2, world.maxl -2));
-    let _ = sc.queue(Print("Press any key to continue..."));
-    let _ = sc.flush();
-    loop {
-        if poll(Duration::from_millis(0)).unwrap() {
-            let _ = read();
-            break;
-        }
-    }
-    let _ = sc.queue(Clear(crossterm::terminal::ClearType::All));
-}
-
-/// Game Physic Rules
-/// TODO: Move to Physics.rs module later
-fn physics(world: &mut World) {
-    let mut rng = thread_rng();
-
-    // check if player hit the ground
-    check_player_status(world);
-
-    // check enemy hit something
-    check_enemy_status(world);
-
-    // move the map Downward
-    update_map(&mut rng, world);
-
-    // create new enemy
-    create_enemy(&mut rng, world);
-    
-    // Move elements along map movements
-    move_enemies(world);
-    move_bullets(world);
-}
-
-fn handle_pressed_keys(world: &mut World) {
-    if poll(Duration::from_millis(10)).unwrap() {
-        let key = read().unwrap();
-
-        while poll(Duration::from_millis(0)).unwrap() {
-            let _ = read();
-        }
-
-        match key {
-            Event::Key(event) => {
-                // I'm reading from keyboard into event
-                match event.code {
-                    KeyCode::Char('q') => world.status = PlayerStatus::Paused,
-                    KeyCode::Char('w') => if world.player_l > 1 { world.player_l -= 1 },
-                    KeyCode::Char('s') => if world.player_l < world.maxl - 1 { world.player_l += 1 },
-                    KeyCode::Char('a') => if world.player_c > 1 { world.player_c -= 1 },
-                    KeyCode::Char('d') => if world.player_c < world.maxc - 1 { world.player_c += 1},
-                    KeyCode::Up => if world.player_l > 1 { world.player_l -= 1 },
-                    KeyCode::Down => if world.player_l < world.maxl - 1 { world.player_l += 1 },
-                    KeyCode::Left => if world.player_c > 1 { world.player_c -= 1 },
-                    KeyCode::Right => if world.player_c < world.maxc - 1 { world.player_c += 1},
-                    KeyCode::Char(' ') => if world.bullet.is_empty() {
-                        let new_bullet = Bullet::new(world.player_c, world.player_l - 1, world.maxl / 4);
-                        world.bullet.push(new_bullet);
-                    },
-                    _ => {}
-                }
-            }
-            _ => {}
-        }
-    }
-}
-
-fn welcome_screen(mut sc: &Stdout, world: &World) {
-    let welcome_msg: &str = "██████╗ ██╗██╗   ██╗███████╗██████╗ ██████╗  █████╗ ██╗██████╗     ██████╗ ██╗   ██╗███████╗████████╗\n\r██╔══██╗██║██║   ██║██╔════╝██╔══██╗██╔══██╗██╔══██╗██║██╔══██╗    ██╔══██╗██║   ██║██╔════╝╚══██╔══╝\n\r██████╔╝██║██║   ██║█████╗  ██████╔╝██████╔╝███████║██║██║  ██║    ██████╔╝██║   ██║███████╗   ██║   \n\r██╔══██╗██║╚██╗ ██╔╝██╔══╝  ██╔══██╗██╔══██╗██╔══██║██║██║  ██║    ██╔══██╗██║   ██║╚════██║   ██║   \n\r██║  ██║██║ ╚████╔╝ ███████╗██║  ██║██║  ██║██║  ██║██║██████╔╝    ██║  ██║╚██████╔╝███████║   ██║   \n\r╚═╝  ╚═╝╚═╝  ╚═══╝  ╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝╚═════╝     ╚═╝  ╚═╝ ╚═════╝ ╚══════╝   ╚═╝   \n";
-    let _ = sc.queue(Clear(crossterm::terminal::ClearType::All));
-    let _ = sc.queue(MoveTo(0, 2));
-    let _ = sc.queue(Print(welcome_msg));
-    let _ = sc.queue(MoveTo(2, world.maxl -2));
-    let _ = sc.queue(Print("Press any key to continue..."));
-    let _ = sc.flush();
-    loop {
-        if poll(Duration::from_millis(0)).unwrap() {
-            let _ = read();
-            break;
-        }
-    }
-    let _ = sc.queue(Clear(crossterm::terminal::ClearType::All));
-}
-
-
-fn goodbye_screen(mut sc: &Stdout, world: &World) {
-    let goodbye_msg1: &str = " ██████╗  ██████╗  ██████╗ ██████╗      ██████╗  █████╗ ███╗   ███╗███████╗██╗\n\r██╔════╝ ██╔═══██╗██╔═══██╗██╔══██╗    ██╔════╝ ██╔══██╗████╗ ████║██╔════╝██║\n\r██║  ███╗██║   ██║██║   ██║██║  ██║    ██║  ███╗███████║██╔████╔██║█████╗  ██║\n\r██║   ██║██║   ██║██║   ██║██║  ██║    ██║   ██║██╔══██║██║╚██╔╝██║██╔══╝  ╚═╝\n\r╚██████╔╝╚██████╔╝╚██████╔╝██████╔╝    ╚██████╔╝██║  ██║██║ ╚═╝ ██║███████╗██╗\n\r ╚═════╝  ╚═════╝  ╚═════╝ ╚═════╝      ╚═════╝ ╚═╝  ╚═╝╚═╝     ╚═╝╚══════╝╚═╝\n";
-    let goodbye_msg2: &str = "████████╗██╗  ██╗ █████╗ ███╗   ██╗██╗  ██╗███████╗\n\r╚══██╔══╝██║  ██║██╔══██╗████╗  ██║██║ ██╔╝██╔════╝\n\r   ██║   ███████║███████║██╔██╗ ██║█████╔╝ ███████╗\n\r   ██║   ██╔══██║██╔══██║██║╚██╗██║██╔═██╗ ╚════██║\n\r   ██║   ██║  ██║██║  ██║██║ ╚████║██║  ██╗███████║██╗\n\r   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝╚══════╝╚═╝\n";
-    let _ = sc.queue(Clear(crossterm::terminal::ClearType::All));
-    let _ = sc.queue(MoveTo(0, 2));
-    let _ = sc.queue(Print(goodbye_msg1));
-    let _ = sc.queue(MoveTo(0, 10));
-    let _ = sc.queue(Print(goodbye_msg2));
-    let _ = sc.queue(MoveTo(2, world.maxl -2));
-    let _ = sc.queue(Print("Press any key to continue..."));
-    let _ = sc.flush();
-    loop {
-        if poll(Duration::from_millis(0)).unwrap() {
-            let _ = read();
-            break;
-        }
-    }
-    let _ = sc.queue(Clear(crossterm::terminal::ClearType::All));
-}
-
-/// Game Physic Rules
-/// TODO: Move to Physics.rs module later
-fn physics(world: &mut World) {
-    let mut rng = thread_rng();
-
-    // check if player hit the ground
-    check_player_status(world);
-
-    // check enemy hit something
-    check_enemy_status(world);
-
-    // move the map Downward
-    update_map(&mut rng, world);
-
-    // create new enemy
-    create_enemy(&mut rng, world);
-    
-    // Move elements along map movements
-    move_enemies(world);
-    move_bullets(world);
-}
-
-fn handle_pressed_keys(world: &mut World) {
-    if poll(Duration::from_millis(10)).unwrap() {
-        let key = read().unwrap();
-
-        while poll(Duration::from_millis(0)).unwrap() {
-            let _ = read();
-        }
-
-        match key {
-            Event::Key(event) => {
-                // I'm reading from keyboard into event
-                match event.code {
-                    KeyCode::Char('q') => world.status = PlayerStatus::Paused,
-                    KeyCode::Char('w') => if world.player_l > 1 { world.player_l -= 1 },
-                    KeyCode::Char('s') => if world.player_l < world.maxl - 1 { world.player_l += 1 },
-                    KeyCode::Char('a') => if world.player_c > 1 { world.player_c -= 1 },
-                    KeyCode::Char('d') => if world.player_c < world.maxc - 1 { world.player_c += 1},
-                    KeyCode::Up => if world.player_l > 1 { world.player_l -= 1 },
-                    KeyCode::Down => if world.player_l < world.maxl - 1 { world.player_l += 1 },
-                    KeyCode::Left => if world.player_c > 1 { world.player_c -= 1 },
-                    KeyCode::Right => if world.player_c < world.maxc - 1 { world.player_c += 1},
-                    KeyCode::Char(' ') => if world.bullet.is_empty() {
-                        let new_bullet = Bullet::new(world.player_c, world.player_l - 1, world.maxl / 4);
-                        world.bullet.push(new_bullet);
-                    },
-                    _ => {}
-                }
-            }
-            _ => {}
-        }
-    }
 }
 
 fn main() -> std::io::Result<()> {
@@ -438,24 +206,64 @@ fn main() -> std::io::Result<()> {
     let slowness = 100;
     let mut world = World::new(maxc, maxl);
 
-    // show welcoming banner
-    welcome_screen(&sc, &world);
+    while world.status == PlayerStatus::Alive || world.status == PlayerStatus::Paused {
 
-    while world.status == PlayerStatus::Alive {
-        
-        handle_pressed_keys(&mut world);
-        physics(&mut world);
-        draw(&sc, &world)?;
+        if poll(Duration::from_millis(10))? {
+            let key = read().unwrap();
 
+            while poll(Duration::from_millis(0)).unwrap() {
+                let _ = read();
+            }
+
+            match key {
+                Event::Key(event) => {
+                    // I'm reading from keyboard into event
+                    match event.code {
+                        KeyCode::Char('q') => break,
+                        KeyCode::Char('w') => if world.status != PlayerStatus::Paused && world.player_location.l > 1 { world.player_location.l -= 1 },
+                        KeyCode::Char('s') => if world.status != PlayerStatus::Paused && world.player_location.l < maxl - 1 { world.player_location.l += 1 },
+                        KeyCode::Char('a') => if world.status != PlayerStatus::Paused && world.player_location.c > 1 { world.player_location.c -= 1 },
+                        KeyCode::Char('d') => if world.status != PlayerStatus::Paused && world.player_location.c < maxc - 1 { world.player_location.c += 1},
+                        KeyCode::Up => if world.status != PlayerStatus::Paused && world.player_location.l > 1 { world.player_location.l -= 1 },
+                        KeyCode::Down => if world.status != PlayerStatus::Paused && world.player_location.l < maxl - 1 { world.player_location.l += 1 },
+                        KeyCode::Left => if world.status != PlayerStatus::Paused && world.player_location.c > 1 { world.player_location.c -= 1 },
+                        KeyCode::Right => if world.status != PlayerStatus::Paused && world.player_location.c < maxc - 1 { world.player_location.c += 1},
+                        KeyCode::Char('p') => {
+                            if world.status == PlayerStatus::Alive { world.status = PlayerStatus::Paused; }
+                            else if world.status == PlayerStatus::Paused { world.status = PlayerStatus::Alive; }
+                        },
+                        KeyCode::Char(' ') => if world.status != PlayerStatus::Paused && world.bullet.len() == 0 {
+                            let bullet = Bullet {
+                                location: Location{
+                                    c: world.player_location.c,
+                                    l: world.player_location.l - 1,
+                                },
+                                energy: world.maxl / 4,
+                            };
+                            world.bullet.push(bullet);
+                        },
+                        _ => {}
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        if world.status != PlayerStatus::Paused
+        {
+            physics(&mut world);
+            draw(&sc, &world)?;
+        }
         thread::sleep(time::Duration::from_millis(slowness));
     }
 
     // game is finished
 
     sc.queue(Clear(crossterm::terminal::ClearType::All))?;
-    goodbye_screen(&sc, &world);
-    
-    sc.queue(Clear(crossterm::terminal::ClearType::All))?
-        .execute(Show)?;    
+    sc.queue(MoveTo(maxc / 2, maxl / 2))?;
+    sc.queue(Print("Good game! Thanks.\n"))?;
+    thread::sleep(time::Duration::from_millis(3000));
+    sc.queue(Clear(crossterm::terminal::ClearType::All))?;
+    sc.execute(Show)?;
     Ok(())
 }
