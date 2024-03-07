@@ -1,9 +1,9 @@
 use std::{cmp::Ordering::*, io::{stdout, Stdout, Write}, time::Duration};
 use std::{thread, time};
-use rand::{thread_rng, Rng};
+use rand::{rngs::ThreadRng, thread_rng, Rng};
 
 use crossterm::{
-    cursor::{Hide, MoveTo, Show}, event::{poll, read, Event, KeyCode}, style::Print, terminal::{disable_raw_mode, enable_raw_mode, size, Clear}, ExecutableCommand, QueueableCommand
+    cursor::{Hide, MoveTo, Show}, event::{poll, read, Event, KeyCode}, style::Print, terminal::{enable_raw_mode, size, Clear}, ExecutableCommand, QueueableCommand
 };
 
 #[derive(PartialEq, Eq)]
@@ -19,10 +19,33 @@ struct Enemy {
     l: u16
 }
 
+impl Enemy {
+
+    fn new(column: u16, line: u16) -> Enemy {
+        Enemy {
+            c: column,
+            l: line
+        }
+    }
+    
+}
+
 struct Bullet {
     c: u16,
     l: u16,
     energy: u16,
+}
+
+impl Bullet {
+    
+    fn new(column: u16, line: u16, energy: u16) -> Bullet {
+        Bullet {
+            c: column,
+            l: line,
+            energy
+        }
+    }
+
 }
 
 struct World {
@@ -52,8 +75,8 @@ impl World {
             next_left: maxc / 2 - 7,
             next_right: maxc / 2 + 7,
             ship: 'P'.to_string(),
-            enemy: vec![],
-            bullet: vec![],
+            enemy: Vec::new(),
+            bullet: Vec::new(),
         }
     }
 
@@ -92,29 +115,38 @@ fn draw(mut sc: &Stdout, world: &World) -> std::io::Result<()> {
     Ok(())
 }
 
+/// check if player hit the ground
+fn check_player_status(world: &mut World) {
 
-fn physics(world: &mut World) {
-    let mut rng = thread_rng();
-
-    // check if player hit the ground
     if world.player_c < world.map[world.player_l as usize].0 ||
         world.player_c >= world.map[world.player_l as usize].1 {
         world.status = PlayerStatus::Dead;
     }
 
-    // check enemy hit something
-    for i in (0..world.enemy.len()).rev() {
-        if world.enemy[i].l == world.player_l && world.enemy[i].c == world.player_c {
+}
+
+/// check enemy hit something
+fn check_enemy_status(world: &mut World) {
+
+    for index in (0..world.enemy.len()).rev() {
+
+        if world.enemy[index].l == world.player_l && world.enemy[index].c == world.player_c {
             world.status = PlayerStatus::Dead
         };
+
+        // 
         for j in (0..world.bullet.len()).rev() {
-            if (world.enemy[i].l.abs_diff(world.bullet[j].l) <= 1) 
-                && world.enemy[i].c == world.bullet[j].c {
-                world.enemy.remove(i);
+            if (world.enemy[index].l.abs_diff(world.bullet[j].l) <= 1) 
+                && world.enemy[index].c == world.bullet[j].c {
+                world.enemy.remove(index);
             }
         }
     }
 
+}
+
+/// Update the map
+fn update_map(rng: &mut ThreadRng, world: &mut World) {
     // move the map downward
     for l in (1..world.map.len()).rev() {
         world.map[l] = world.map[l - 1];
@@ -143,34 +175,104 @@ fn physics(world: &mut World) {
     if world.next_right.abs_diff(world.next_left) < 3 {
         world.next_right += 3;
     }
+}
 
-    // create a new enemy; maybe
+/// Create a new enemy
+fn create_enemy(rng: &mut ThreadRng, world: &mut World) {
+
+    // Possibility
     if rng.gen_range(0..10) >= 9 {
-        let new_enemy = Enemy {
-            l: 0,
-            c: rng.gen_range(world.map[0].0..world.map[0].1)
-        };
-        world.enemy.push(new_enemy);
+        world.enemy.push(
+            Enemy::new(
+                rng.gen_range(world.map[0].0..world.map[0].1),
+                0,
+            )
+        );
     }
 
-    // move enemies on the river
-    for i in (0..world.enemy.len()).rev() {
-        world.enemy[i].l += 1;
-        if world.enemy[i].l >= world.maxl {
-            world.enemy.remove(i);
+}
+
+/// Move enemies on the river
+fn move_enemies(world: &mut World) {
+
+    for index in (0..world.enemy.len()).rev() {
+
+        world.enemy[index].l += 1;
+        if world.enemy[index].l >= world.maxl {
+            world.enemy.remove(index);
         }
+
     }
 
-    // move the bullets
-    for i in (0..world.bullet.len()).rev() {
-        if world.bullet[i].energy == 0 || world.bullet[i].l <= 2{
-            world.bullet.remove(i);
+}
+
+/// Move Bullets
+fn move_bullets(world: &mut World) {
+
+    for index in (0..world.bullet.len()).rev() {
+        if world.bullet[index].energy == 0 || world.bullet[index].l <= 2{
+            world.bullet.remove(index);
         } else {
-            world.bullet[i].l -= 2;
-            world.bullet[i].energy -= 1;
+            world.bullet[index].l -= 2;
+            world.bullet[index].energy -= 1;
         }
-    }    
+    }   
 
+}
+
+/// Game Physic Rules
+/// TODO: Move to Physics.rs module later
+fn physics(world: &mut World) {
+    let mut rng = thread_rng();
+
+    // check if player hit the ground
+    check_player_status(world);
+
+    // check enemy hit something
+    check_enemy_status(world);
+
+    // move the map Downward
+    update_map(&mut rng, world);
+
+    // create new enemy
+    create_enemy(&mut rng, world);
+    
+    // Move elements along map movements
+    move_enemies(world);
+    move_bullets(world);
+}
+
+fn handle_pressed_keys(world: &mut World) {
+    if poll(Duration::from_millis(10)).unwrap() {
+        let key = read().unwrap();
+
+        while poll(Duration::from_millis(0)).unwrap() {
+            let _ = read();
+        }
+
+        match key {
+            Event::Key(event) => {
+                // I'm reading from keyboard into event
+                match event.code {
+                    KeyCode::Char('q') => world.status = PlayerStatus::Paused,
+                    KeyCode::Char('w') => if world.player_l > 1 { world.player_l -= 1 },
+                    KeyCode::Char('s') => if world.player_l < world.maxl - 1 { world.player_l += 1 },
+                    KeyCode::Char('a') => if world.player_c > 1 { world.player_c -= 1 },
+                    KeyCode::Char('d') => if world.player_c < world.maxc - 1 { world.player_c += 1},
+                    KeyCode::Up => if world.player_l > 1 { world.player_l -= 1 },
+                    KeyCode::Down => if world.player_l < world.maxl - 1 { world.player_l += 1 },
+                    KeyCode::Left => if world.player_c > 1 { world.player_c -= 1 },
+                    KeyCode::Right => if world.player_c < world.maxc - 1 { world.player_c += 1},
+                    KeyCode::Char(' ') => if world.bullet.is_empty() {
+                        let new_bullet = Bullet::new(world.player_c, world.player_l - 1, world.maxl / 4);
+                        world.bullet.push(new_bullet);
+                    },
+                    _ => {}
+                }
+            }
+            _ => {}
+        }
+    }
 }
 
 fn main() -> std::io::Result<()> {
@@ -185,41 +287,8 @@ fn main() -> std::io::Result<()> {
     let mut world = World::new(maxc, maxl);
 
     while world.status == PlayerStatus::Alive {
-        if poll(Duration::from_millis(10))? {
-            let key = read().unwrap();
-
-            while poll(Duration::from_millis(0)).unwrap() {
-                let _ = read();
-            }
-
-            match key {
-                Event::Key(event) => {
-                    // I'm reading from keyboard into event
-                    match event.code {
-                        KeyCode::Char('q') => break,
-                        KeyCode::Char('w') => if world.player_l > 1 { world.player_l -= 1 },
-                        KeyCode::Char('s') => if world.player_l < maxl - 1 { world.player_l += 1 },
-                        KeyCode::Char('a') => if world.player_c > 1 { world.player_c -= 1 },
-                        KeyCode::Char('d') => if world.player_c < maxc - 1 { world.player_c += 1},
-                        KeyCode::Up => if world.player_l > 1 { world.player_l -= 1 },
-                        KeyCode::Down => if world.player_l < maxl - 1 { world.player_l += 1 },
-                        KeyCode::Left => if world.player_c > 1 { world.player_c -= 1 },
-                        KeyCode::Right => if world.player_c < maxc - 1 { world.player_c += 1},
-                        KeyCode::Char(' ') => if world.bullet.len() == 0 {
-                            let bullet = Bullet {
-                                c: world.player_c,
-                                l: world.player_l-1,
-                                energy: world.maxl / 4,
-                            };
-                            world.bullet.push(bullet);
-                        },
-                        _ => {}
-                    }
-                }
-                _ => {}
-            }
-        }
-
+        
+        handle_pressed_keys(&mut world);
         physics(&mut world);
         draw(&sc, &world)?;
 
@@ -227,12 +296,11 @@ fn main() -> std::io::Result<()> {
     }
 
     // game is finished
-
-    sc.queue(Clear(crossterm::terminal::ClearType::All))?;
-    sc.queue(MoveTo(maxc / 2, maxl / 2))?;
-    sc.queue(Print("Good game! Thanks.\n"))?;
+    sc.queue(Clear(crossterm::terminal::ClearType::All))?
+        .queue(MoveTo(maxc / 2, maxl / 2))?
+        .queue(Print("Good game! Thanks.\n"))?;
     thread::sleep(time::Duration::from_millis(3000));
-    sc.queue(Clear(crossterm::terminal::ClearType::All))?;
-    sc.execute(Show)?;
+    sc.queue(Clear(crossterm::terminal::ClearType::All))?
+        .execute(Show)?;
     Ok(())
 }
