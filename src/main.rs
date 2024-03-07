@@ -162,13 +162,15 @@ fn check_player_status(world: &mut World) {
 /// check enemy hit something
 fn check_enemy_status(world: &mut World) {
 
-    for i in (0..world.enemy.len()).rev() {
-        if world.player_location.hit(&world.enemy[i].location) {
+    for index in (0..world.enemy.len()).rev() {
+
+        if matches!(world.enemy[index].status,EnemyStatus::Alive) && 
+            world.player_location.hit(&world.enemy[index].location) {
             world.status = PlayerStatus::Dead
         };
         for j in (0..world.bullet.len()).rev() {                
-            if world.bullet[j].location.hit_with_margin(&world.enemy[i].location,1,0,1,0) {
-                world.enemy[i].status = EnemyStatus::DeadBody;
+            if world.bullet[j].location.hit_with_margin(&world.enemy[index].location,1,0,1,0) {
+                world.enemy[index].status = EnemyStatus::DeadBody;
             }
         }
     }
