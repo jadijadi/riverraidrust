@@ -1,5 +1,6 @@
 use std::{cmp::Ordering::*, io::{stdout, Stdout, Write}, time::Duration};
 use std::{thread, time};
+use std::num::Wrapping;
 use rand::{rngs::ThreadRng, thread_rng, Rng};
 
 use crossterm::{
@@ -164,12 +165,17 @@ fn update_map(rng: &mut ThreadRng, world: &mut World) {
         Equal => {},
     };
 
-    // TODO: below randoms may 1) go outside of range
-    if world.next_left == world.map[0].0 && rng.gen_range(0..10) >= 7 {
-        world.next_left = rng.gen_range(world.next_left-5..world.next_left+5)
+    if world.next_left == world.map[0].0 && rng.gen_range(0..10) >= 7  {
+        world.next_left = rng.gen_range(world.next_left.saturating_sub(5)..world.next_left+5);
+        if world.next_left == 0 {
+            world.next_left = 1;
+        }
     }
     if world.next_right == world.map[0].1 && rng.gen_range(0..10) >= 7  {
-        world.next_right = rng.gen_range(world.next_right-5..world.next_right+5)
+        world.next_right = rng.gen_range(world.next_right-5..world.next_right+5);
+        if world.next_right > world.maxc {
+            world.next_right = Wrapping(world.maxc).0 - 1;
+        }
     }
 
     if world.next_right.abs_diff(world.next_left) < 3 {
@@ -218,6 +224,44 @@ fn move_bullets(world: &mut World) {
         }
     }   
 
+}
+
+fn welcome_screen(mut sc: &Stdout, world: &World) {
+    let welcome_msg: &str = "██████╗ ██╗██╗   ██╗███████╗██████╗ ██████╗  █████╗ ██╗██████╗     ██████╗ ██╗   ██╗███████╗████████╗\n\r██╔══██╗██║██║   ██║██╔════╝██╔══██╗██╔══██╗██╔══██╗██║██╔══██╗    ██╔══██╗██║   ██║██╔════╝╚══██╔══╝\n\r██████╔╝██║██║   ██║█████╗  ██████╔╝██████╔╝███████║██║██║  ██║    ██████╔╝██║   ██║███████╗   ██║   \n\r██╔══██╗██║╚██╗ ██╔╝██╔══╝  ██╔══██╗██╔══██╗██╔══██║██║██║  ██║    ██╔══██╗██║   ██║╚════██║   ██║   \n\r██║  ██║██║ ╚████╔╝ ███████╗██║  ██║██║  ██║██║  ██║██║██████╔╝    ██║  ██║╚██████╔╝███████║   ██║   \n\r╚═╝  ╚═╝╚═╝  ╚═══╝  ╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝╚═════╝     ╚═╝  ╚═╝ ╚═════╝ ╚══════╝   ╚═╝   \n";
+    let _ = sc.queue(Clear(crossterm::terminal::ClearType::All));
+    let _ = sc.queue(MoveTo(0, 2));
+    let _ = sc.queue(Print(welcome_msg));
+    let _ = sc.queue(MoveTo(2, world.maxl -2));
+    let _ = sc.queue(Print("Press any key to continue..."));
+    let _ = sc.flush();
+    loop {
+        if poll(Duration::from_millis(0)).unwrap() {
+            let _ = read();
+            break;
+        }
+    }
+    let _ = sc.queue(Clear(crossterm::terminal::ClearType::All));
+}
+
+
+fn goodbye_screen(mut sc: &Stdout, world: &World) {
+    let goodbye_msg1: &str = " ██████╗  ██████╗  ██████╗ ██████╗      ██████╗  █████╗ ███╗   ███╗███████╗██╗\n\r██╔════╝ ██╔═══██╗██╔═══██╗██╔══██╗    ██╔════╝ ██╔══██╗████╗ ████║██╔════╝██║\n\r██║  ███╗██║   ██║██║   ██║██║  ██║    ██║  ███╗███████║██╔████╔██║█████╗  ██║\n\r██║   ██║██║   ██║██║   ██║██║  ██║    ██║   ██║██╔══██║██║╚██╔╝██║██╔══╝  ╚═╝\n\r╚██████╔╝╚██████╔╝╚██████╔╝██████╔╝    ╚██████╔╝██║  ██║██║ ╚═╝ ██║███████╗██╗\n\r ╚═════╝  ╚═════╝  ╚═════╝ ╚═════╝      ╚═════╝ ╚═╝  ╚═╝╚═╝     ╚═╝╚══════╝╚═╝\n";
+    let goodbye_msg2: &str = "████████╗██╗  ██╗ █████╗ ███╗   ██╗██╗  ██╗███████╗\n\r╚══██╔══╝██║  ██║██╔══██╗████╗  ██║██║ ██╔╝██╔════╝\n\r   ██║   ███████║███████║██╔██╗ ██║█████╔╝ ███████╗\n\r   ██║   ██╔══██║██╔══██║██║╚██╗██║██╔═██╗ ╚════██║\n\r   ██║   ██║  ██║██║  ██║██║ ╚████║██║  ██╗███████║██╗\n\r   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝╚══════╝╚═╝\n";
+    let _ = sc.queue(Clear(crossterm::terminal::ClearType::All));
+    let _ = sc.queue(MoveTo(0, 2));
+    let _ = sc.queue(Print(goodbye_msg1));
+    let _ = sc.queue(MoveTo(0, 10));
+    let _ = sc.queue(Print(goodbye_msg2));
+    let _ = sc.queue(MoveTo(2, world.maxl -2));
+    let _ = sc.queue(Print("Press any key to continue..."));
+    let _ = sc.flush();
+    loop {
+        if poll(Duration::from_millis(0)).unwrap() {
+            let _ = read();
+            break;
+        }
+    }
+    let _ = sc.queue(Clear(crossterm::terminal::ClearType::All));
 }
 
 /// Game Physic Rules
@@ -286,6 +330,9 @@ fn main() -> std::io::Result<()> {
     let slowness = 100;
     let mut world = World::new(maxc, maxl);
 
+    // show welcoming banner
+    welcome_screen(&sc, &world);
+
     while world.status == PlayerStatus::Alive {
         
         handle_pressed_keys(&mut world);
@@ -296,11 +343,11 @@ fn main() -> std::io::Result<()> {
     }
 
     // game is finished
+
+    sc.queue(Clear(crossterm::terminal::ClearType::All))?;
+    goodbye_screen(&sc, &world);
+    
     sc.queue(Clear(crossterm::terminal::ClearType::All))?
-        .queue(MoveTo(maxc / 2, maxl / 2))?
-        .queue(Print("Good game! Thanks.\n"))?;
-    thread::sleep(time::Duration::from_millis(3000));
-    sc.queue(Clear(crossterm::terminal::ClearType::All))?
-        .execute(Show)?;
+        .execute(Show)?;    
     Ok(())
 }
