@@ -145,7 +145,7 @@ fn check_enemy_status(world: &mut World) {
 
     for index in (0..world.enemy.len()).rev() {
 
-        if world.enemy[index].l == world.player_l && world.enemy[index].c == world.player_c {
+        if matches!(world.enemy[index].status,EnemyStatus::Alive) && world.enemy[index].l == world.player_l && world.enemy[index].c == world.player_c {
             world.status = PlayerStatus::Dead
         };
 
