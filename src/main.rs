@@ -12,7 +12,8 @@ enum PlayerStatus {
     Dead,
     Alive,
     Animation,
-    Paused
+    Paused,
+    Quit
 }
 
 struct Enemy {
@@ -298,16 +299,20 @@ fn handle_pressed_keys(world: &mut World) {
             Event::Key(event) => {
                 // I'm reading from keyboard into event
                 match event.code {
-                    KeyCode::Char('q') => world.status = PlayerStatus::Paused,
-                    KeyCode::Char('w') => if world.player_l > 1 { world.player_l -= 1 },
-                    KeyCode::Char('s') => if world.player_l < world.maxl - 1 { world.player_l += 1 },
-                    KeyCode::Char('a') => if world.player_c > 1 { world.player_c -= 1 },
-                    KeyCode::Char('d') => if world.player_c < world.maxc - 1 { world.player_c += 1},
-                    KeyCode::Up => if world.player_l > 1 { world.player_l -= 1 },
-                    KeyCode::Down => if world.player_l < world.maxl - 1 { world.player_l += 1 },
-                    KeyCode::Left => if world.player_c > 1 { world.player_c -= 1 },
-                    KeyCode::Right => if world.player_c < world.maxc - 1 { world.player_c += 1},
-                    KeyCode::Char(' ') => if world.bullet.is_empty() {
+                    KeyCode::Char('q') => world.status = PlayerStatus::Quit,
+                    KeyCode::Char('w') => if world.status == PlayerStatus::Alive && world.player_l > 1 { world.player_l -= 1 },
+                    KeyCode::Char('s') => if world.status == PlayerStatus::Alive && world.player_l < world.maxl - 1 { world.player_l += 1 },
+                    KeyCode::Char('a') => if world.status == PlayerStatus::Alive && world.player_c > 1 { world.player_c -= 1 },
+                    KeyCode::Char('d') => if world.status == PlayerStatus::Alive && world.player_c < world.maxc - 1 { world.player_c += 1},
+                    KeyCode::Up => if world.status == PlayerStatus::Alive && world.player_l > 1 { world.player_l -= 1 },
+                    KeyCode::Down => if world.status == PlayerStatus::Alive && world.player_l < world.maxl - 1 { world.player_l += 1 },
+                    KeyCode::Left => if world.status == PlayerStatus::Alive && world.player_c > 1 { world.player_c -= 1 },
+                    KeyCode::Right => if world.status == PlayerStatus::Alive && world.player_c < world.maxc - 1 { world.player_c += 1},
+                    KeyCode::Char('p') => {
+                        if world.status == PlayerStatus::Alive { world.status = PlayerStatus::Paused; }
+                        else if world.status == PlayerStatus::Paused { world.status = PlayerStatus::Alive; }
+                    },
+                    KeyCode::Char(' ') => if world.status == PlayerStatus::Alive && world.bullet.is_empty() {
                         let new_bullet = Bullet::new(world.player_c, world.player_l - 1, world.maxl / 4);
                         world.bullet.push(new_bullet);
                     },
@@ -333,12 +338,13 @@ fn main() -> std::io::Result<()> {
     // show welcoming banner
     welcome_screen(&sc, &world);
 
-    while world.status == PlayerStatus::Alive {
+    while world.status == PlayerStatus::Alive || world.status == PlayerStatus::Paused {
         
         handle_pressed_keys(&mut world);
-        physics(&mut world);
-        draw(&sc, &world)?;
-
+        if world.status != PlayerStatus::Paused {
+            physics(&mut world);
+            draw(&sc, &world)?;
+        }
         thread::sleep(time::Duration::from_millis(slowness));
     }
 
