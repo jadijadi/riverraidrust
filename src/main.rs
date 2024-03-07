@@ -1,7 +1,7 @@
-use std::{cmp::Ordering::*, io::{stdout, Stdout, Write}, time::Duration};
+use std::{borrow::BorrowMut, cmp::Ordering::*, io::{stdout, Stdout, Write}, time::Duration};
 use std::{thread, time};
 use std::num::Wrapping;
-use rand::{rngs::ThreadRng, thread_rng, Rng};
+use rand::{rngs::ThreadRng, seq::index, thread_rng, Rng};
 
 use crossterm::{
     cursor::{Hide, MoveTo, Show}, event::{poll, read, Event, KeyCode}, style::Print, terminal::{enable_raw_mode, size, Clear}, ExecutableCommand, QueueableCommand
@@ -15,17 +15,25 @@ enum PlayerStatus {
     Paused
 }
 
+enum EnemyStatus {
+    Alive,
+    DeadBody,
+    Dead
+}
+
 struct Enemy {
     c: u16,
-    l: u16
+    l: u16,
+    status: EnemyStatus
 }
 
 impl Enemy {
 
-    fn new(column: u16, line: u16) -> Enemy {
+    fn new(column: u16, line: u16, status: EnemyStatus) -> Enemy {
         Enemy {
             c: column,
-            l: line
+            l: line,
+            status: status
         }
     }
     
@@ -83,7 +91,7 @@ impl World {
 
 }
 
-fn draw(mut sc: &Stdout, world: &World) -> std::io::Result<()> {
+fn draw(mut sc: &Stdout, world: &mut World) -> std::io::Result<()> {
     sc.queue(Clear(crossterm::terminal::ClearType::All))?;
 
     // draw the map
@@ -95,9 +103,15 @@ fn draw(mut sc: &Stdout, world: &World) -> std::io::Result<()> {
     }
 
     // draw enemies
-    for e in &world.enemy {
-        sc.queue(MoveTo(e.c, e.l))?
-        .queue(Print("E"))?;       
+    for index in (0..world.enemy.len()).rev() {
+        match world.enemy[index].status {
+            EnemyStatus::Alive => {sc.queue(MoveTo(world.enemy[index].c, world.enemy[index].l))?.queue(Print("E"))?;},
+            EnemyStatus::DeadBody => {
+                sc.queue(MoveTo(world.enemy[index].c, world.enemy[index].l))?.queue(Print("X"))?;
+                world.enemy[index].status = EnemyStatus::Dead;
+            },
+            EnemyStatus::Dead => {world.enemy.remove(index);}
+        };
     }
 
     // draw bullet
@@ -139,7 +153,7 @@ fn check_enemy_status(world: &mut World) {
         for j in (0..world.bullet.len()).rev() {
             if (world.enemy[index].l.abs_diff(world.bullet[j].l) <= 1) 
                 && world.enemy[index].c == world.bullet[j].c {
-                world.enemy.remove(index);
+                world.enemy[index].status = EnemyStatus::DeadBody;
             }
         }
     }
@@ -192,6 +206,7 @@ fn create_enemy(rng: &mut ThreadRng, world: &mut World) {
             Enemy::new(
                 rng.gen_range(world.map[0].0..world.map[0].1),
                 0,
+                EnemyStatus::Alive
             )
         );
     }
@@ -337,7 +352,7 @@ fn main() -> std::io::Result<()> {
         
         handle_pressed_keys(&mut world);
         physics(&mut world);
-        draw(&sc, &world)?;
+        draw(&sc, &mut world)?;
 
         thread::sleep(time::Duration::from_millis(slowness));
     }
