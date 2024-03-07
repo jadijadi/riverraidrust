@@ -4,7 +4,8 @@ use std::num::Wrapping;
 use rand::{rngs::ThreadRng, thread_rng, Rng};
 
 use crossterm::{
-    cursor::{Hide, MoveTo, Show}, event::{poll, read, Event, KeyCode}, style::Print, terminal::{enable_raw_mode, size, Clear}, ExecutableCommand, QueueableCommand
+    style::{Print, SetForegroundColor, ResetColor, Color},
+    cursor::{Hide, MoveTo, Show}, event::{poll, read, Event, KeyCode}, terminal::{enable_raw_mode, size, Clear}, ExecutableCommand, QueueableCommand
 };
 
 #[derive(PartialEq, Eq)]
@@ -87,31 +88,39 @@ fn draw(mut sc: &Stdout, world: &World) -> std::io::Result<()> {
     sc.queue(Clear(crossterm::terminal::ClearType::All))?;
 
     // draw the map
+    sc.queue(SetForegroundColor(Color::Blue))?;
     for l in 0..world.map.len() {
         sc.queue(MoveTo(0, l as u16))?
             .queue(Print("+".repeat(world.map[l].0 as usize)))?
             .queue(MoveTo(world.map[l].1, l as u16))?
             .queue(Print("+".repeat((world.maxc - world.map[l].1) as usize)))?;
     }
+    sc.queue(ResetColor)?;
 
     // draw enemies
+    sc.queue(SetForegroundColor(Color::Red))?;
     for e in &world.enemy {
         sc.queue(MoveTo(e.c, e.l))?
         .queue(Print("E"))?;       
     }
+    sc.queue(ResetColor)?;
 
     // draw bullet
+    sc.queue(SetForegroundColor(Color::Magenta))?;
     for b in &world.bullet {
         sc.queue(MoveTo(b.c, b.l))?
             .queue(Print("|"))?
             .queue(MoveTo(b.c, b.l-1))?
             .queue(Print("^"))?;
     }
+    sc.queue(ResetColor)?;
 
     // draw the player
+    sc.queue(SetForegroundColor(Color::Green))?;
     sc.queue(MoveTo(world.player_c, world.player_l))?
         .queue(Print(world.ship.as_str()))?
         .flush()?;
+    sc.queue(ResetColor)?;
 
     Ok(())
 }
