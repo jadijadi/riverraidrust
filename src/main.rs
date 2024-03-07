@@ -1,7 +1,7 @@
-use std::{borrow::BorrowMut, cmp::Ordering::*, io::{stdout, Stdout, Write}, time::Duration};
+use std::{cmp::Ordering::*, io::{stdout, Stdout, Write}, time::Duration};
 use std::{thread, time};
 use std::num::Wrapping;
-use rand::{rngs::ThreadRng, seq::index, thread_rng, Rng};
+use rand::{rngs::ThreadRng, thread_rng, Rng};
 
 use crossterm::{
     cursor::{Hide, MoveTo, Show}, event::{poll, read, Event, KeyCode}, style::Print, terminal::{enable_raw_mode, size, Clear}, ExecutableCommand, QueueableCommand
