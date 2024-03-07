@@ -86,6 +86,19 @@ impl World {
 
 }
 
+fn hit_margin(loc1: &Location,loc2: &Location, l_margin:u16, c_margin:u16) -> bool{
+    return 
+    (loc1.c == loc2.c && loc1.l == loc2.l) || 
+    (loc1.c + c_margin == loc2.c && loc1.l == loc2.l) || 
+    (loc1.c == loc2.c && loc1.l + l_margin == loc2.l) ||
+    (loc1.c - c_margin == loc2.c && loc1.l == loc2.l) || 
+    (loc1.c == loc2.c && loc1.l - l_margin == loc2.l) 
+    ;
+}
+fn hit(loc1: &Location,loc2: &Location) -> bool{
+    return loc1.c == loc2.c && loc1.l == loc2.l;
+}
+
 fn draw(mut sc: &Stdout, world: &World) -> std::io::Result<()> {
     sc.queue(Clear(crossterm::terminal::ClearType::All))?;
 
@@ -134,14 +147,14 @@ fn check_enemy_status(world: &mut World) {
 
     for index in (0..world.enemy.len()).rev() {
 
-        if world.enemy[index].location.l == world.player_location.l && world.enemy[index].location.c == world.player_location.c {
-            world.status = PlayerStatus::Dead
+        if hit(&world.enemy[index].location,&world.player_location) {
+            world.status = PlayerStatus::Dead;
+            return;
         };
 
         // 
         for j in (0..world.bullet.len()).rev() {
-            if (world.enemy[index].location.l.abs_diff(world.bullet[j].location.l) <= 1) 
-                && world.enemy[index].location.c == world.bullet[j].location.c {
+            if hit_margin(&world.enemy[index].location,&world.bullet[j].location,1,0) {
                 world.enemy.remove(index);
             }
         }
