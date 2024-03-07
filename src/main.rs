@@ -1,6 +1,5 @@
 use std::{cmp::Ordering::*, io::{stdout, Stdout, Write}, time::Duration};
 use std::{thread, time};
-use rand::{thread_rng, Rng};
 use std::num::Wrapping;
 use rand::{rngs::ThreadRng, thread_rng, Rng};
 
@@ -263,6 +262,8 @@ fn goodbye_screen(mut sc: &Stdout, world: &World) {
         }
     }
     let _ = sc.queue(Clear(crossterm::terminal::ClearType::All));
+}
+
 /// Game Physic Rules
 /// TODO: Move to Physics.rs module later
 fn physics(world: &mut World) {
