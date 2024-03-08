@@ -21,27 +21,48 @@ enum EnemyStatus {
     Dead
 }
 
-struct Enemy {
+struct Location {
     c: u16,
     l: u16,
+}
+struct Enemy {
+    location: Location,
     status: EnemyStatus
+}
+
+impl Location {
+
+    fn new(c: u16, l: u16) -> Location {
+        Location { c, l }
+    }
+
+    // Checks if two locations are within a specified margin of each other
+    fn hit_with_margin(&self, other: &Location,top: u16,right: u16,buttom: u16, left: u16) -> bool {
+        (other.l > self.l || self.l - other.l <= buttom) &&
+        (self.l > other.l || other.l - self.l <= top) && 
+        (other.c > self.c || self.c - other.c <= left) && 
+        (self.c > other.c || other.c - self.c <= right)
+    }
+    
+    // check if two locations is point to the same location
+    fn hit(&self, other: &Location) -> bool {
+        self.hit_with_margin(other,0,0,0,0)
+    }
 }
 
 impl Enemy {
 
     fn new(column: u16, line: u16, status: EnemyStatus) -> Enemy {
         Enemy {
-            c: column,
-            l: line,
-            status: status
+            location: Location::new(column, line),
+            status: status,
         }
     }
     
 }
 
 struct Bullet {
-    c: u16,
-    l: u16,
+    location: Location,
     energy: u16,
 }
 
@@ -49,8 +70,7 @@ impl Bullet {
     
     fn new(column: u16, line: u16, energy: u16) -> Bullet {
         Bullet {
-            c: column,
-            l: line,
+            location: Location::new(column, line),
             energy
         }
     }
@@ -58,8 +78,7 @@ impl Bullet {
 }
 
 struct World {
-    player_c: u16,
-    player_l: u16,
+    player_location: Location,
     map: Vec<(u16, u16)>,
     maxc: u16,
     maxl: u16,
@@ -75,8 +94,7 @@ impl World {
 
     fn new (maxc: u16, maxl: u16) -> World {
         World {
-            player_c: maxc / 2,
-            player_l: maxl - 1,
+            player_location: Location::new(maxc / 2, maxl - 1),
             map: vec![(maxc/2-5, maxc/2+5); maxl as usize],
             maxc,
             maxl,
@@ -105,9 +123,9 @@ fn draw(mut sc: &Stdout, world: &mut World) -> std::io::Result<()> {
     // draw enemies
     for index in (0..world.enemy.len()).rev() {
         match world.enemy[index].status {
-            EnemyStatus::Alive => {sc.queue(MoveTo(world.enemy[index].c, world.enemy[index].l))?.queue(Print("E"))?;},
+            EnemyStatus::Alive => {sc.queue(MoveTo(world.enemy[index].location.c, world.enemy[index].location.l))?.queue(Print("E"))?;},
             EnemyStatus::DeadBody => {
-                sc.queue(MoveTo(world.enemy[index].c, world.enemy[index].l))?.queue(Print("X"))?;
+                sc.queue(MoveTo(world.enemy[index].location.c, world.enemy[index].location.l))?.queue(Print("X"))?;
                 world.enemy[index].status = EnemyStatus::Dead;
             },
             EnemyStatus::Dead => {world.enemy.remove(index);}
@@ -116,14 +134,14 @@ fn draw(mut sc: &Stdout, world: &mut World) -> std::io::Result<()> {
 
     // draw bullet
     for b in &world.bullet {
-        sc.queue(MoveTo(b.c, b.l))?
+        sc.queue(MoveTo(b.location.c, b.location.l))?
             .queue(Print("|"))?
-            .queue(MoveTo(b.c, b.l-1))?
+            .queue(MoveTo(b.location.c, b.location.l-1))?
             .queue(Print("^"))?;
     }
 
     // draw the player
-    sc.queue(MoveTo(world.player_c, world.player_l))?
+    sc.queue(MoveTo(world.player_location.c, world.player_location.l))?
         .queue(Print(world.ship.as_str()))?
         .flush()?;
 
@@ -133,8 +151,8 @@ fn draw(mut sc: &Stdout, world: &mut World) -> std::io::Result<()> {
 /// check if player hit the ground
 fn check_player_status(world: &mut World) {
 
-    if world.player_c < world.map[world.player_l as usize].0 ||
-        world.player_c >= world.map[world.player_l as usize].1 {
+    if world.player_location.c < world.map[world.player_location.l as usize].0 ||
+        world.player_location.c >= world.map[world.player_location.l as usize].1 {
         world.status = PlayerStatus::Dead;
     }
 
@@ -145,14 +163,12 @@ fn check_enemy_status(world: &mut World) {
 
     for index in (0..world.enemy.len()).rev() {
 
-        if matches!(world.enemy[index].status,EnemyStatus::Alive) && world.enemy[index].l == world.player_l && world.enemy[index].c == world.player_c {
+        if matches!(world.enemy[index].status,EnemyStatus::Alive) && 
+            world.player_location.hit(&world.enemy[index].location) {
             world.status = PlayerStatus::Dead
         };
-
-        // 
-        for j in (0..world.bullet.len()).rev() {
-            if (world.enemy[index].l.abs_diff(world.bullet[j].l) <= 1) 
-                && world.enemy[index].c == world.bullet[j].c {
+        for j in (0..world.bullet.len()).rev() {                
+            if world.bullet[j].location.hit_with_margin(&world.enemy[index].location,1,0,1,0) {
                 world.enemy[index].status = EnemyStatus::DeadBody;
             }
         }
@@ -218,8 +234,8 @@ fn move_enemies(world: &mut World) {
 
     for index in (0..world.enemy.len()).rev() {
 
-        world.enemy[index].l += 1;
-        if world.enemy[index].l >= world.maxl {
+        world.enemy[index].location.l += 1;
+        if world.enemy[index].location.l >= world.maxl {
             world.enemy.remove(index);
         }
 
@@ -231,10 +247,10 @@ fn move_enemies(world: &mut World) {
 fn move_bullets(world: &mut World) {
 
     for index in (0..world.bullet.len()).rev() {
-        if world.bullet[index].energy == 0 || world.bullet[index].l <= 2{
+        if world.bullet[index].energy == 0 || world.bullet[index].location.l <= 2{
             world.bullet.remove(index);
         } else {
-            world.bullet[index].l -= 2;
+            world.bullet[index].location.l -= 2;
             world.bullet[index].energy -= 1;
         }
     }   
@@ -314,16 +330,16 @@ fn handle_pressed_keys(world: &mut World) {
                 // I'm reading from keyboard into event
                 match event.code {
                     KeyCode::Char('q') => world.status = PlayerStatus::Paused,
-                    KeyCode::Char('w') => if world.player_l > 1 { world.player_l -= 1 },
-                    KeyCode::Char('s') => if world.player_l < world.maxl - 1 { world.player_l += 1 },
-                    KeyCode::Char('a') => if world.player_c > 1 { world.player_c -= 1 },
-                    KeyCode::Char('d') => if world.player_c < world.maxc - 1 { world.player_c += 1},
-                    KeyCode::Up => if world.player_l > 1 { world.player_l -= 1 },
-                    KeyCode::Down => if world.player_l < world.maxl - 1 { world.player_l += 1 },
-                    KeyCode::Left => if world.player_c > 1 { world.player_c -= 1 },
-                    KeyCode::Right => if world.player_c < world.maxc - 1 { world.player_c += 1},
+                    KeyCode::Char('w') => if world.player_location.l > 1 { world.player_location.l -= 1 },
+                    KeyCode::Char('s') => if world.player_location.l < world.maxl - 1 { world.player_location.l += 1 },
+                    KeyCode::Char('a') => if world.player_location.c > 1 { world.player_location.c -= 1 },
+                    KeyCode::Char('d') => if world.player_location.c < world.maxc - 1 { world.player_location.c += 1},
+                    KeyCode::Up => if world.player_location.l > 1 { world.player_location.l -= 1 },
+                    KeyCode::Down => if world.player_location.l < world.maxl - 1 { world.player_location.l += 1 },
+                    KeyCode::Left => if world.player_location.c > 1 { world.player_location.c -= 1 },
+                    KeyCode::Right => if world.player_location.c < world.maxc - 1 { world.player_location.c += 1},
                     KeyCode::Char(' ') => if world.bullet.is_empty() {
-                        let new_bullet = Bullet::new(world.player_c, world.player_l - 1, world.maxl / 4);
+                        let new_bullet = Bullet::new(world.player_location.c, world.player_location.l - 1, world.maxl / 4);
                         world.bullet.push(new_bullet);
                     },
                     _ => {}
