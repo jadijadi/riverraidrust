@@ -7,7 +7,7 @@ use crossterm::{
     cursor::{Hide, MoveTo, Show}, event::{poll, read, Event, KeyCode}, style::Print, terminal::{enable_raw_mode, size, Clear}, ExecutableCommand, QueueableCommand
 };
 
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Debug)]
 enum PlayerStatus {
     Dead,
     Alive,
@@ -15,16 +15,20 @@ enum PlayerStatus {
     Paused
 }
 
+#[derive(PartialEq, Eq, Debug)]
 enum EnemyStatus {
     Alive,
     DeadBody,
     Dead
 }
 
+#[derive(PartialEq, Eq, Debug)]
 struct Location {
     c: u16,
     l: u16,
 }
+
+#[derive(PartialEq, Eq, Debug)]
 struct Enemy {
     location: Location,
     status: EnemyStatus
@@ -61,6 +65,7 @@ impl Enemy {
     
 }
 
+#[derive(PartialEq, Eq, Debug)]
 struct Bullet {
     location: Location,
     energy: u16,
@@ -77,6 +82,7 @@ impl Bullet {
 
 }
 
+#[derive(PartialEq, Eq, Debug)]
 struct World {
     player_location: Location,
     map: Vec<(u16, u16)>,
@@ -381,4 +387,146 @@ fn main() -> std::io::Result<()> {
     sc.queue(Clear(crossterm::terminal::ClearType::All))?
         .execute(Show)?;    
     Ok(())
+}
+
+#[cfg(test)]
+mod test_cases {
+    use super::*;
+
+    #[test]
+    fn map_generation() {
+        let (maxc, maxl) = size().unwrap();
+        let mut rng = thread_rng();
+
+        // init the world
+        // TODO: test different ranges for world
+        let mut world = World::new(maxc, maxl);
+        
+        for _ in 0..1_000_000 {
+            // Sanity check
+            assert_ne!(world.next_left, world.next_right);
+            assert!(world.next_left > 0 && world.next_left < world.maxc);
+            assert!(world.next_right > world.next_left && world.next_right < world.maxc);
+            update_map(&mut rng, &mut world);
+        }
+
+    }
+
+    #[test]
+    fn enemy_behavior() {
+        
+        // init the world
+        let (maxc, maxl) = size().unwrap();
+        let mut world = World::new(maxc, maxl);
+
+        // Create an Enemy at the same position as the Player
+        world.enemy.push(
+
+            Enemy::new(
+                world.player_location.c,
+                world.player_location.l,
+                EnemyStatus::Alive
+            )
+
+        );
+
+        // Enemy is supposed to kill the player
+        check_enemy_status(&mut world);
+
+        assert_eq!(world.status, PlayerStatus::Dead);
+        assert_eq!(world.enemy[0].status, EnemyStatus::Alive);
+    }
+
+    #[test]
+    fn player_shooting() {
+        
+        // init the world
+        let (maxc, maxl) = size().unwrap();
+        let mut world = World::new(maxc, maxl);
+
+        // Create an Enemy at the same position as the Player
+        world.enemy.push(
+
+            Enemy::new(
+                world.player_location.c,
+                world.player_location.l - 1,
+                EnemyStatus::Alive
+            )
+
+        );
+
+        // Simulating the shooting
+        // TODO: Test different energy ranges
+        world.bullet.push(
+            
+            Bullet::new(
+                world.player_location.c, world.player_location.l - 1, 0
+            )
+
+        );
+
+        // Enemy is supposed to get shot & die by the player
+        check_enemy_status(&mut world);
+
+        assert_eq!(world.status, PlayerStatus::Alive);
+        assert_eq!(world.enemy[0].status, EnemyStatus::DeadBody);
+    }
+
+    #[test]
+    fn movement_behaviors() {
+        
+        // init the world
+        let (maxc, maxl) = size().unwrap();
+        let mut world = World::new(maxc, maxl);
+
+        // Create an Enemy in a distanced location from the Player
+        world.enemy.push(
+
+            Enemy::new(
+                world.player_location.c,
+                world.player_location.l - 1,
+                EnemyStatus::Alive
+            )
+
+        );
+
+        // Sanity Checks
+        check_enemy_status(&mut world);
+        assert_ne!(world.player_location, world.enemy[0].location);
+        assert_eq!(world.enemy[0].status, EnemyStatus::Alive);
+        
+        // Moving the enemy towards the Player
+        move_enemies(&mut world);
+        check_enemy_status(&mut world);
+
+        // Kills the player
+        assert_eq!(world.player_location, world.enemy[0].location);
+        assert_eq!(world.enemy[0].status, EnemyStatus::Alive);
+        assert_eq!(world.status, PlayerStatus::Dead);
+    }
+
+    #[test]
+    fn player_behavior() {
+
+        // init the world
+        let (maxc, maxl) = size().unwrap();
+        let mut world = World::new(maxc, maxl);
+
+        // Sanity Check
+        assert_eq!(world.status, PlayerStatus::Alive);
+        
+        // Make the player crash to Left
+        world.player_location.c = world.map[world.player_location.l as usize].0 - 1;
+
+        check_player_status(&mut world);
+        assert_eq!(world.status, PlayerStatus::Dead);
+        
+        // Make the player crash to Right
+        world.player_location.c = world.map[world.player_location.l as usize].1;
+        world.status = PlayerStatus::Alive;
+        
+        check_player_status(&mut world);
+        assert_eq!(world.status, PlayerStatus::Dead);
+
+    }
 }
