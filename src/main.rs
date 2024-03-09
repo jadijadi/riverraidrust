@@ -1,4 +1,4 @@
-use std::{cmp::Ordering::*, io::{stdout, Stdout, Write}, time::Duration};
+use std::{collections::VecDeque, cmp::Ordering::*, io::{stdout, Stdout, Write}, time::Duration};
 use std::{thread, time};
 use std::num::Wrapping;
 use rand::{rngs::ThreadRng, thread_rng, Rng};
@@ -80,7 +80,7 @@ impl Bullet {
 
 struct World {
     player_location: Location,
-    map: Vec<(u16, u16)>,
+    map: VecDeque<(u16, u16)>,
     maxc: u16,
     maxl: u16,
     status: PlayerStatus,
@@ -96,7 +96,7 @@ impl World {
     fn new (maxc: u16, maxl: u16) -> World {
         World {
             player_location: Location::new(maxc / 2, maxl - 1),
-            map: vec![(maxc/2-5, maxc/2+5); maxl as usize],
+            map: VecDeque::from(vec![(maxc/2-5, maxc/2+5); maxl as usize]),
             maxc,
             maxl,
             status: PlayerStatus::Alive,
@@ -179,20 +179,18 @@ fn check_enemy_status(world: &mut World) {
 
 /// Update the map
 fn update_map(rng: &mut ThreadRng, world: &mut World) {
-    // move the map downward
-    for l in (1..world.map.len()).rev() {
-        world.map[l] = world.map[l - 1];
-    }
-
-    let (left, right) = &mut world.map[0];
-    match world.next_left.cmp(left) {
-        Greater => *left += 1,
-        Less => *left -= 1,
+    // move the map downward using VecDeque
+    
+    world.map.pop_back();
+    let (mut left, mut right) = world.map[0];
+    match world.next_left.cmp(&left) {
+        Greater => left += 1,
+        Less => left -= 1,
         Equal => {},
     };
-    match world.next_right.cmp(right) {
-        Greater => *right += 1,
-        Less => *right -= 1,
+    match world.next_right.cmp(&right) {
+        Greater => right += 1,
+        Less => right -= 1,
         Equal => {},
     };
 
@@ -212,6 +210,7 @@ fn update_map(rng: &mut ThreadRng, world: &mut World) {
     if world.next_right.abs_diff(world.next_left) < 3 {
         world.next_right += 3;
     }
+    world.map.push_front((left, right))
 }
 
 /// Create a new enemy
