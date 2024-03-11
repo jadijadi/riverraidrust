@@ -89,6 +89,7 @@ struct World {
     ship: String,
     enemy: Vec<Enemy>,
     bullet: Vec<Bullet>,
+    score: u16
 }
 
 impl World {
@@ -105,6 +106,7 @@ impl World {
             ship: 'P'.to_string(),
             enemy: Vec::new(),
             bullet: Vec::new(),
+            score: 0
         }
     }
 
@@ -143,8 +145,13 @@ fn draw(mut sc: &Stdout, world: &mut World) -> std::io::Result<()> {
 
     // draw the player
     sc.queue(MoveTo(world.player_location.c, world.player_location.l))?
-        .queue(Print(world.ship.as_str()))?
-        .flush()?;
+        .queue(Print(world.ship.as_str()))?;
+
+    // draw score
+    sc.queue(MoveTo(2, 2))?
+        .queue(Print(format!("   SCORE: {}   ",  world.score)))?;
+
+    sc.flush()?;
 
     Ok(())
 }
@@ -171,6 +178,7 @@ fn check_enemy_status(world: &mut World) {
         for j in (0..world.bullet.len()).rev() {                
             if world.bullet[j].location.hit_with_margin(&world.enemy[index].location,1,0,1,0) {
                 world.enemy[index].status = EnemyStatus::DeadBody;
+                world.score += 10;
             }
         }
     }
@@ -210,7 +218,8 @@ fn update_map(rng: &mut ThreadRng, world: &mut World) {
     if world.next_right.abs_diff(world.next_left) < 3 {
         world.next_right += 3;
     }
-    world.map.push_front((left, right))
+    world.map.push_front((left, right));
+    world.score += 1;
 }
 
 /// Create a new enemy
@@ -283,6 +292,8 @@ fn goodbye_screen(mut sc: &Stdout, world: &World) {
     let _ = sc.queue(Print(goodbye_msg1));
     let _ = sc.queue(MoveTo(0, 10));
     let _ = sc.queue(Print(goodbye_msg2));
+    let _ = sc.queue(MoveTo(0, 18));
+    let _ = sc.queue(Print(format!("Your Score: {}", world.score)));
     let _ = sc.queue(MoveTo(2, world.maxl -2));
     let _ = sc.queue(Print("Press any key to continue..."));
     let _ = sc.flush();
@@ -384,6 +395,6 @@ fn main() -> std::io::Result<()> {
     goodbye_screen(&sc, &world);
     
     sc.queue(Clear(crossterm::terminal::ClearType::All))?
-        .execute(Show)?;    
+        .execute(Show)?;
     Ok(())
 }
