@@ -165,7 +165,7 @@ fn draw(mut sc: &Stdout, world: &mut World) -> std::io::Result<()> {
         sc.queue(MoveTo(b.location.c, b.location.l))?
             .queue(Print(b.timer / 10))?;
         
-        if b.timer <= 0 { // simulate going off
+        if b.timer < 10 { // simulate going off
             sc.queue(MoveTo(b.location.c, b.location.l))?
             .queue(Print("#"))?
             .queue(MoveTo(b.location.c-1, b.location.l))?
@@ -230,7 +230,7 @@ fn check_bomb_status(world: &mut World) {
 
     for i in (0..world.bombs.len()).rev() {
 
-        if world.bombs[i].timer == 0 && world.bombs[i].location.hit_with_margin(&world.player_location,1,1,1,1) {
+        if world.bombs[i].timer >= 0 && world.bombs[i].timer < 10 && world.bombs[i].location.hit_with_margin(&world.player_location,1,1,1,1) {
             world.status = PlayerStatus::Dead;
         }
     }
