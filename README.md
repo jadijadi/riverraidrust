@@ -11,8 +11,10 @@ For fun and education.
 
 ## How to play
 
-Use `w`,`a`,`s`,`d` or (`↑`,`←`,`↓`,`→`) to move and avoid enemies while staying inside the river.
+The player `P` tries to stay inside the river while avoiding enemies `E`.
+Use `w`,`a`,`s`,`d` or (`↑`,`←`,`↓`,`→`) to move.
 Use `Space` to shoot them.
+Collect fuel `F` by shooting it.
 
 You can pause the game by pressing `p` and exit by pressing `q`
 
