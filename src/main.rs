@@ -4,7 +4,7 @@ use std::num::Wrapping;
 use rand::{rngs::ThreadRng, thread_rng, Rng};
 
 use crossterm::{
-    cursor::{Hide, MoveTo, Show}, event::{poll, read, Event, KeyCode}, style::Print, terminal::{enable_raw_mode, size, Clear}, ExecutableCommand, QueueableCommand
+    cursor::{Hide, MoveTo, Show}, event::{poll, read, Event, KeyCode}, style::Print, terminal::{disable_raw_mode , enable_raw_mode, size, Clear}, ExecutableCommand, QueueableCommand
 };
 
 #[derive(PartialEq, Eq)]
@@ -382,8 +382,8 @@ fn main() -> std::io::Result<()> {
 
     sc.queue(Clear(crossterm::terminal::ClearType::All))?;
     goodbye_screen(&sc, &world);
-    
     sc.queue(Clear(crossterm::terminal::ClearType::All))?
-        .execute(Show)?;    
+    .execute(Show)?;    
+    disable_raw_mode()?;
     Ok(())
 }
