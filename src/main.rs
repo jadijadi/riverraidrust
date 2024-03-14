@@ -373,14 +373,12 @@ fn move_bullets(world: &mut World) {
             world.bullet[index].location.l -= 2;
             world.bullet[index].energy -= 1;
 
-            if world.bullet[index].location.c < world.map[world.bullet[index].location.l as usize].0
-                || world.bullet[index].location.c
-                    >= world.map[world.bullet[index].location.l as usize].1
-            {
+            if world.bullet[index].location.c < world.map[world.bullet[index].location.l as usize].0 ||
+                world.bullet[index].location.c >= world.map[world.bullet[index].location.l as usize].1 {
                 world.bullet.remove(index);
-            }
-        }
-    }
+            }  
+        }           
+    }   
 }
 
 fn welcome_screen(mut sc: &Stdout, world: &World) {
