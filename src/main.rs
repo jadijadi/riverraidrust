@@ -384,11 +384,32 @@ fn goodbye_screen(mut sc: &Stdout, world: &World) {
     let _ = sc.queue(Print(goodbye_msg1));
     let _ = sc.queue(MoveTo(0, 10));
     let _ = sc.queue(Print(goodbye_msg2));
-    let _ = sc.queue(MoveTo(2, world.maxl -4));
+    let _ = sc.queue(MoveTo(2, world.maxl -5));
     match world.death_cause {
-        DeathCause::Ground => { let _ = sc.queue(Print("You crashed in the ground.")); }
-        DeathCause::Enemy => { let _ = sc.queue(Print("An enemy killed you.")); },
-        DeathCause::Fuel => { let _ = sc.queue(Print("You ran out of fuel.")); },
+        DeathCause::Ground => { 
+            if world.maxc > 91 {
+                let _ = sc.queue(Print("\r█▄█ █▀█ █░█   █▀▀ █▀█ ▄▀█ █▀ █░█ █▀▀ █▀▄   █ █▄░█   ▀█▀ █░█ █▀▀   █▀▀ █▀█ █▀█ █░█ █▄░█ █▀▄ ░\n\r░█░ █▄█ █▄█   █▄▄ █▀▄ █▀█ ▄█ █▀█ ██▄ █▄▀   █ █░▀█   ░█░ █▀█ ██▄   █▄█ █▀▄ █▄█ █▄█ █░▀█ █▄▀ ▄\n\r")); 
+            }
+            else {
+                let _ = sc.queue(Print("You crashed in the ground."));
+            }
+        },
+        DeathCause::Enemy => { 
+            if world.maxc > 72 {
+                let _ = sc.queue(Print("\r▄▀█ █▄░█   █▀▀ █▄░█ █▀▀ █▀▄▀█ █▄█   █▄▀ █ █░░ █░░ █▀▀ █▀▄   █▄█ █▀█ █░█ ░\n\r█▀█ █░▀█   ██▄ █░▀█ ██▄ █░▀░█ ░█░   █░█ █ █▄▄ █▄▄ ██▄ █▄▀   ░█░ █▄█ █▄█ ▄\n\r")); 
+            }
+            else {
+                let _ = sc.queue(Print("An enemy killed you."));
+            }
+        },
+        DeathCause::Fuel => { 
+            if world.maxc > 69 {
+                let _ = sc.queue(Print("\r█▄█ █▀█ █░█   █▀█ ▄▀█ █▄░█   █▀█ █░█ ▀█▀   █▀█ █▀▀   █▀▀ █░█ █▀▀ █░░ ░\n\r░█░ █▄█ █▄█   █▀▄ █▀█ █░▀█   █▄█ █▄█ ░█░   █▄█ █▀░   █▀░ █▄█ ██▄ █▄▄ ▄\n\r")); 
+            }
+            else {
+                let _ = sc.queue(Print("You ran out of fuel."));
+            }
+        },
         _ => {}
     }
     let _ = sc.queue(MoveTo(2, world.maxl -2));
