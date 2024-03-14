@@ -349,8 +349,10 @@ fn move_bullets(world: &mut World) {
 fn welcome_screen(mut sc: &Stdout, world: &World) {
     let welcome_msg: &str = "██████╗ ██╗██╗   ██╗███████╗██████╗ ██████╗  █████╗ ██╗██████╗     ██████╗ ██╗   ██╗███████╗████████╗\n\r██╔══██╗██║██║   ██║██╔════╝██╔══██╗██╔══██╗██╔══██╗██║██╔══██╗    ██╔══██╗██║   ██║██╔════╝╚══██╔══╝\n\r██████╔╝██║██║   ██║█████╗  ██████╔╝██████╔╝███████║██║██║  ██║    ██████╔╝██║   ██║███████╗   ██║   \n\r██╔══██╗██║╚██╗ ██╔╝██╔══╝  ██╔══██╗██╔══██╗██╔══██║██║██║  ██║    ██╔══██╗██║   ██║╚════██║   ██║   \n\r██║  ██║██║ ╚████╔╝ ███████╗██║  ██║██║  ██║██║  ██║██║██████╔╝    ██║  ██║╚██████╔╝███████║   ██║   \n\r╚═╝  ╚═╝╚═╝  ╚═══╝  ╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝╚═════╝     ╚═╝  ╚═╝ ╚═════╝ ╚══════╝   ╚═╝   \n";
     let _ = sc.queue(Clear(crossterm::terminal::ClearType::All));
-    let _ = sc.queue(MoveTo(0, 2));
-    let _ = sc.queue(Print(welcome_msg));
+    if world.maxc > 100 {
+        let _ = sc.queue(MoveTo(0, 2));
+        let _ = sc.queue(Print(welcome_msg));
+    }
     let _ = sc.queue(MoveTo(2, world.maxl -2));
     let _ = sc.queue(Print("Press any key to continue..."));
     let _ = sc.flush();
@@ -368,10 +370,12 @@ fn goodbye_screen(mut sc: &Stdout, world: &World) {
     let goodbye_msg1: &str = " ██████╗  ██████╗  ██████╗ ██████╗      ██████╗  █████╗ ███╗   ███╗███████╗██╗\n\r██╔════╝ ██╔═══██╗██╔═══██╗██╔══██╗    ██╔════╝ ██╔══██╗████╗ ████║██╔════╝██║\n\r██║  ███╗██║   ██║██║   ██║██║  ██║    ██║  ███╗███████║██╔████╔██║█████╗  ██║\n\r██║   ██║██║   ██║██║   ██║██║  ██║    ██║   ██║██╔══██║██║╚██╔╝██║██╔══╝  ╚═╝\n\r╚██████╔╝╚██████╔╝╚██████╔╝██████╔╝    ╚██████╔╝██║  ██║██║ ╚═╝ ██║███████╗██╗\n\r ╚═════╝  ╚═════╝  ╚═════╝ ╚═════╝      ╚═════╝ ╚═╝  ╚═╝╚═╝     ╚═╝╚══════╝╚═╝\n";
     let goodbye_msg2: &str = "████████╗██╗  ██╗ █████╗ ███╗   ██╗██╗  ██╗███████╗\n\r╚══██╔══╝██║  ██║██╔══██╗████╗  ██║██║ ██╔╝██╔════╝\n\r   ██║   ███████║███████║██╔██╗ ██║█████╔╝ ███████╗\n\r   ██║   ██╔══██║██╔══██║██║╚██╗██║██╔═██╗ ╚════██║\n\r   ██║   ██║  ██║██║  ██║██║ ╚████║██║  ██╗███████║██╗\n\r   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝╚══════╝╚═╝\n";
     let _ = sc.queue(Clear(crossterm::terminal::ClearType::All));
-    let _ = sc.queue(MoveTo(0, 2));
-    let _ = sc.queue(Print(goodbye_msg1));
-    let _ = sc.queue(MoveTo(0, 10));
-    let _ = sc.queue(Print(goodbye_msg2));
+    if world.maxc > 77 {
+        let _ = sc.queue(MoveTo(0, 2));
+        let _ = sc.queue(Print(goodbye_msg1));
+        let _ = sc.queue(MoveTo(0, 10));
+        let _ = sc.queue(Print(goodbye_msg2));
+    }
     let _ = sc.queue(MoveTo(2, world.maxl -2));
     let _ = sc.queue(Print("Press any key to continue..."));
     let _ = sc.flush();
