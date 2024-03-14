@@ -453,7 +453,8 @@ fn goodbye_screen(mut sc: &Stdout, world: &World) {
         }
         _ => {}
     }
-    let _ = sc.queue(MoveTo(2, world.maxl - 2));
+
+    let _ = sc.queue(MoveTo(2, world.maxl -2));
     let _ = sc.queue(Print("Press any key to continue..."));
     let _ = sc.flush();
     loop {
