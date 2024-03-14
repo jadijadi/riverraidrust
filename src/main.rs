@@ -390,7 +390,12 @@ fn welcome_screen(mut sc: &Stdout, world: &World) {
         let _ = sc.queue(MoveTo(0, 2));
         let _ = sc.queue(Print(welcome_msg));
     }
-    let _ = sc.queue(MoveTo(2, world.maxl - 2));
+    else {
+        let _ = sc.queue(MoveTo(0, 2));
+        let _ = sc.queue(Print("RiverRaid Rust"));
+    }
+    let _ = sc.queue(MoveTo(2, world.maxl -2));
+
     let _ = sc.queue(Print("Press any key to continue..."));
     let _ = sc.flush();
     loop {
@@ -436,7 +441,8 @@ fn goodbye_screen(mut sc: &Stdout, world: &World) {
         }
         _ => {}
     }
-    let _ = sc.queue(MoveTo(2, world.maxl - 2));
+
+    let _ = sc.queue(MoveTo(2, world.maxl -2));
     let _ = sc.queue(Print("Press any key to continue..."));
     let _ = sc.flush();
     loop {
