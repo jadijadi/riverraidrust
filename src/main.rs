@@ -31,6 +31,23 @@ struct Enemy {
     status: EnemyStatus
 }
 
+struct Bomb{
+    location : Location,
+    timer : i16,
+}
+
+
+impl Bomb {
+
+    fn new(column: u16, line: u16, t: i16) -> Bomb {
+        Bomb {
+            location: Location::new(column, line),
+            timer: t,
+        }
+    }
+    
+}
+
 impl Location {
 
     fn new(c: u16, l: u16) -> Location {
@@ -89,6 +106,7 @@ struct World {
     ship: String,
     enemy: Vec<Enemy>,
     bullet: Vec<Bullet>,
+    bombs: Vec<Bomb>,
 }
 
 impl World {
@@ -105,6 +123,7 @@ impl World {
             ship: 'P'.to_string(),
             enemy: Vec::new(),
             bullet: Vec::new(),
+            bombs: Vec::new(),
         }
     }
 
@@ -141,6 +160,35 @@ fn draw(mut sc: &Stdout, world: &mut World) -> std::io::Result<()> {
             .queue(Print("^"))?;
     }
 
+    // draw Bombs
+    for b in &mut world.bombs {
+        sc.queue(MoveTo(b.location.c, b.location.l))?
+            .queue(Print(b.timer / 10))?;
+        
+        if b.timer < 10 { // simulate going off
+            sc.queue(MoveTo(b.location.c, b.location.l))?
+            .queue(Print("#"))?
+            .queue(MoveTo(b.location.c-1, b.location.l))?
+            .queue(Print("#"))?
+            .queue(MoveTo(b.location.c+1, b.location.l))?
+            .queue(Print("#"))?
+            .queue(MoveTo(b.location.c, b.location.l-1))?
+            .queue(Print("#"))?
+            .queue(MoveTo(b.location.c, b.location.l+1))?
+            .queue(Print("#"))?
+            .queue(MoveTo(b.location.c-1, b.location.l-1))?
+            .queue(Print("#"))?
+            .queue(MoveTo(b.location.c+1, b.location.l-1))?
+            .queue(Print("#"))?
+            .queue(MoveTo(b.location.c-1, b.location.l+1))?
+            .queue(Print("#"))?
+            .queue(MoveTo(b.location.c+1, b.location.l+1))?
+            .queue(Print("#"))?;
+        }
+
+        b.timer -= 1;
+    }
+
     // draw the player
     sc.queue(MoveTo(world.player_location.c, world.player_location.l))?
         .queue(Print(world.ship.as_str()))?
@@ -172,6 +220,18 @@ fn check_enemy_status(world: &mut World) {
             if world.bullet[j].location.hit_with_margin(&world.enemy[index].location,1,0,1,0) {
                 world.enemy[index].status = EnemyStatus::DeadBody;
             }
+        }
+    }
+
+}
+
+// check if bomb hurt player
+fn check_bomb_status(world: &mut World) {
+
+    for i in (0..world.bombs.len()).rev() {
+
+        if world.bombs[i].timer >= 0 && world.bombs[i].timer < 10 && world.bombs[i].location.hit_with_margin(&world.player_location,1,1,1,1) {
+            world.status = PlayerStatus::Dead;
         }
     }
 
@@ -243,6 +303,41 @@ fn move_enemies(world: &mut World) {
 
 }
 
+/// Create a new bomb
+fn create_bomb(rng: &mut ThreadRng, world: &mut World) {
+
+    // Possibility
+    if 
+        world.map[0].1.abs_diff(world.map[0].0) > 10 && // at least 5 empty space needed to avoid being too hard
+        rng.gen_range(0..10) >= 9 {
+        world.bombs.push(
+            Bomb::new(
+                rng.gen_range(world.map[0].0..world.map[0].1),
+                0,
+                rng.gen_range(20..40), // timer of bomb
+            )
+        );
+    }
+
+}
+
+/// Move Bombs on the river
+fn move_bombs(world: &mut World) {
+
+    for index in (0..world.bombs.len()).rev() {
+    
+        world.bombs[index].location.l += 1;
+        if world.bombs[index].location.l >= world.maxl {
+            world.bombs.remove(index);
+        }
+        else if world.bombs[index].timer <= -5 {
+            world.bombs.remove(index);
+        }
+        
+    }
+
+}
+
 /// Move Bullets
 fn move_bullets(world: &mut World) {
 
@@ -306,14 +401,24 @@ fn physics(world: &mut World) {
     // check enemy hit something
     check_enemy_status(world);
 
+    // check bomb hurt player
+    check_bomb_status(world);
+
     // move the map Downward
     update_map(&mut rng, world);
 
     // create new enemy
     create_enemy(&mut rng, world);
+
+    // create new bomb
+    create_bomb(&mut rng, world);
     
     // Move elements along map movements
+
     move_enemies(world);
+    //moves bombs one step in map
+    move_bombs(world);
+
     move_bullets(world);
 }
 
