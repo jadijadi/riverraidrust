@@ -22,6 +22,13 @@ enum EnemyStatus {
     Dead
 }
 
+enum DeathCause {
+    None,
+    Enemy,
+    Ground,
+    Fuel
+}
+
 struct Location {
     c: u16,
     l: u16,
@@ -107,6 +114,7 @@ struct World {
     bullet: Vec<Bullet>,
     gas: u16,
     score: u16,
+    death_cause: DeathCause,
 }
 
 impl World {
@@ -126,6 +134,7 @@ impl World {
             fuel: Vec::new(),
             score: 0,
             gas: 1700,
+            death_cause: DeathCause::None,
         }
     }
 
@@ -192,10 +201,12 @@ fn check_player_status(world: &mut World) {
     if world.player_location.c < world.map[world.player_location.l as usize].0 ||
         world.player_location.c >= world.map[world.player_location.l as usize].1 {
         world.status = PlayerStatus::Dead;
+        world.death_cause = DeathCause::Ground;
     }
 
     if world.gas == 0 {
         world.status = PlayerStatus::Dead;
+        world.death_cause = DeathCause::Fuel;
     }
 
 }
@@ -224,7 +235,8 @@ fn check_enemy_status(world: &mut World) {
     for index in (0..world.enemy.len()).rev() {
         if matches!(world.enemy[index].status,EnemyStatus::Alive) && 
             world.player_location.hit(&world.enemy[index].location) {
-            world.status = PlayerStatus::Dead
+            world.status = PlayerStatus::Dead;
+            world.death_cause = DeathCause::Enemy;
         };
         for j in (0..world.bullet.len()).rev() {                
             if world.bullet[j].location.hit_with_margin(&world.enemy[index].location,1,0,1,0) {
@@ -372,6 +384,13 @@ fn goodbye_screen(mut sc: &Stdout, world: &World) {
     let _ = sc.queue(Print(goodbye_msg1));
     let _ = sc.queue(MoveTo(0, 10));
     let _ = sc.queue(Print(goodbye_msg2));
+    let _ = sc.queue(MoveTo(2, world.maxl -4));
+    match world.death_cause {
+        DeathCause::Ground => { let _ = sc.queue(Print("You crashed in the ground.")); }
+        DeathCause::Enemy => { let _ = sc.queue(Print("An enemy killed you.")); },
+        DeathCause::Fuel => { let _ = sc.queue(Print("You ran out of fuel.")); },
+        _ => {}
+    }
     let _ = sc.queue(MoveTo(2, world.maxl -2));
     let _ = sc.queue(Print("Press any key to continue..."));
     let _ = sc.flush();
@@ -474,7 +493,6 @@ fn main() -> std::io::Result<()> {
     }
 
     // game is finished
-
     sc.queue(Clear(crossterm::terminal::ClearType::All))?;
     goodbye_screen(&sc, &world);
     sc.queue(Clear(crossterm::terminal::ClearType::All))?
