@@ -376,7 +376,7 @@ fn pause_screen(mut sc: &Stdout , world: &World) {
     let _ = sc.flush();
 }
 
-fn goodbye_screen(sc: &mut Stdout, world: &World) {
+fn goodbye_screen(mut sc: &Stdout, world: &World) {
     let goodbye_msg1: &str = " ██████╗  ██████╗  ██████╗ ██████╗      ██████╗  █████╗ ███╗   ███╗███████╗██╗\n\r██╔════╝ ██╔═══██╗██╔═══██╗██╔══██╗    ██╔════╝ ██╔══██╗████╗ ████║██╔════╝██║\n\r██║  ███╗██║   ██║██║   ██║██║  ██║    ██║  ███╗███████║██╔████╔██║█████╗  ██║\n\r██║   ██║██║   ██║██║   ██║██║  ██║    ██║   ██║██╔══██║██║╚██╔╝██║██╔══╝  ╚═╝\n\r╚██████╔╝╚██████╔╝╚██████╔╝██████╔╝    ╚██████╔╝██║  ██║██║ ╚═╝ ██║███████╗██╗\n\r ╚═════╝  ╚═════╝  ╚═════╝ ╚═════╝      ╚═════╝ ╚═╝  ╚═╝╚═╝     ╚═╝╚══════╝╚═╝\n";
     let goodbye_msg2: &str = "████████╗██╗  ██╗ █████╗ ███╗   ██╗██╗  ██╗███████╗\n\r╚══██╔══╝██║  ██║██╔══██╗████╗  ██║██║ ██╔╝██╔════╝\n\r   ██║   ███████║███████║██╔██╗ ██║█████╔╝ ███████╗\n\r   ██║   ██╔══██║██╔══██║██║╚██╗██║██╔═██╗ ╚════██║\n\r   ██║   ██║  ██║██║  ██║██║ ╚████║██║  ██╗███████║██╗\n\r   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝╚══════╝╚═╝\n";
     let _ = sc.queue(Clear(crossterm::terminal::ClearType::All));
@@ -424,7 +424,7 @@ fn physics(world: &mut World) {
     if world.gas >= 1 { world.gas -= 1; }
 }
 
-fn handle_pressed_keys(sc : &mut Stdout  , world: &mut World) {
+fn handle_pressed_keys(sc : &Stdout  , world: &mut World) {
     if poll(Duration::from_millis(10)).unwrap() {
         let key = read().unwrap();
 
@@ -477,7 +477,7 @@ fn main() -> std::io::Result<()> {
 
     while world.status == PlayerStatus::Alive || world.status == PlayerStatus::Paused {
         
-        handle_pressed_keys(&mut sc ,&mut world);
+        handle_pressed_keys(&sc ,&mut world);
         if world.status != PlayerStatus::Paused {
             physics(&mut world);
             draw(&sc, &mut world)?;
@@ -487,7 +487,7 @@ fn main() -> std::io::Result<()> {
 
     // game is finished
     sc.queue(Clear(crossterm::terminal::ClearType::All))?;
-    goodbye_screen(&mut sc, &world);
+    goodbye_screen(&sc, &world);
     sc.queue(Clear(crossterm::terminal::ClearType::All))?
     .execute(Show)?;    
     disable_raw_mode()?;
