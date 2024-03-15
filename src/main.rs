@@ -367,11 +367,11 @@ fn pause_screen(mut sc: &Stdout , world: &World) {
     let pause_msg1: &str = "╔═══════════╗";
     let pause_msg2: &str = "║Game Paused║";
     let pause_msg3: &str = "╚═══════════╝";
-    let _ = sc.queue(MoveTo(world.maxc / 2 , world.maxl / 2));
+    let _ = sc.queue(MoveTo(world.maxc / 2 - 6, world.maxl / 2 - 1));
     let _ = sc.queue(Print(pause_msg1));
-    let _ = sc.queue(MoveTo(world.maxc / 2 , world.maxl / 2 + 1));
+    let _ = sc.queue(MoveTo(world.maxc / 2 - 6, world.maxl / 2));
     let _ = sc.queue(Print(pause_msg2));
-    let _ = sc.queue(MoveTo(world.maxc / 2 , world.maxl / 2 + 2));
+    let _ = sc.queue(MoveTo(world.maxc / 2 - 6, world.maxl / 2 + 1));
     let _ = sc.queue(Print(pause_msg3));
     let _ = sc.flush();
 }
