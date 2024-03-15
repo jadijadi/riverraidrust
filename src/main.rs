@@ -424,7 +424,7 @@ fn physics(world: &mut World) {
     if world.gas >= 1 { world.gas -= 1; }
 }
 
-fn handle_pressed_keys(sc : &Stdout  , world: &mut World) {
+fn handle_pressed_keys(world: &mut World) {
     if poll(Duration::from_millis(10)).unwrap() {
         let key = read().unwrap();
 
@@ -446,8 +446,8 @@ fn handle_pressed_keys(sc : &Stdout  , world: &mut World) {
                     KeyCode::Left => if world.status == PlayerStatus::Alive && world.player_location.c > 1 { world.player_location.c -= 1 },
                     KeyCode::Right => if world.status == PlayerStatus::Alive && world.player_location.c < world.maxc - 1 { world.player_location.c += 1},
                     KeyCode::Char('p') => {
-                        if world.status == PlayerStatus::Alive {world.status = PlayerStatus::Paused;pause_screen(&sc, &world);}
-                        else if world.status == PlayerStatus::Paused {world.status = PlayerStatus::Alive;}
+                        if world.status == PlayerStatus::Alive { world.status = PlayerStatus::Paused;}
+                        else if world.status == PlayerStatus::Paused { world.status = PlayerStatus::Alive;}
                     },
                     KeyCode::Char(' ') => if world.status == PlayerStatus::Alive && world.bullet.is_empty() {
                         let new_bullet = Bullet::new(world.player_location.c, world.player_location.l - 1, world.maxl / 4);
@@ -477,10 +477,12 @@ fn main() -> std::io::Result<()> {
 
     while world.status == PlayerStatus::Alive || world.status == PlayerStatus::Paused {
         
-        handle_pressed_keys(&sc ,&mut world);
+        handle_pressed_keys(&mut world);
         if world.status != PlayerStatus::Paused {
             physics(&mut world);
             draw(&sc, &mut world)?;
+        } else {
+            pause_screen(&sc, &world);
         }
         thread::sleep(time::Duration::from_millis(slowness));
     }
