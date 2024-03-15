@@ -363,11 +363,6 @@ fn welcome_screen(mut sc: &Stdout, world: &World) {
     let _ = sc.queue(Clear(crossterm::terminal::ClearType::All));
 }
 
-//╔═══════════╗
-//║Game Paused║
-//╚═══════════╝
-
-
 fn pause_screen(mut sc: &Stdout , world: &World) {
     let pause_msg1: &str = "╔═══════════╗";
     let pause_msg2: &str = "║Game Paused║";
