@@ -363,8 +363,25 @@ fn welcome_screen(mut sc: &Stdout, world: &World) {
     let _ = sc.queue(Clear(crossterm::terminal::ClearType::All));
 }
 
+//╔═══════════╗
+//║Game Paused║
+//╚═══════════╝
 
-fn goodbye_screen(mut sc: &Stdout, world: &World) {
+
+fn pause_screen(mut sc: &Stdout , world: &World) {
+    let pause_msg1: &str = "╔═══════════╗";
+    let pause_msg2: &str = "║Game Paused║";
+    let pause_msg3: &str = "╚═══════════╝";
+    let _ = sc.queue(MoveTo(world.maxc / 2 , world.maxl / 2));
+    let _ = sc.queue(Print(pause_msg1));
+    let _ = sc.queue(MoveTo(world.maxc / 2 , world.maxl / 2 + 1));
+    let _ = sc.queue(Print(pause_msg2));
+    let _ = sc.queue(MoveTo(world.maxc / 2 , world.maxl / 2 + 2));
+    let _ = sc.queue(Print(pause_msg3));
+    let _ = sc.flush();
+}
+
+fn goodbye_screen(sc: &mut Stdout, world: &World) {
     let goodbye_msg1: &str = " ██████╗  ██████╗  ██████╗ ██████╗      ██████╗  █████╗ ███╗   ███╗███████╗██╗\n\r██╔════╝ ██╔═══██╗██╔═══██╗██╔══██╗    ██╔════╝ ██╔══██╗████╗ ████║██╔════╝██║\n\r██║  ███╗██║   ██║██║   ██║██║  ██║    ██║  ███╗███████║██╔████╔██║█████╗  ██║\n\r██║   ██║██║   ██║██║   ██║██║  ██║    ██║   ██║██╔══██║██║╚██╔╝██║██╔══╝  ╚═╝\n\r╚██████╔╝╚██████╔╝╚██████╔╝██████╔╝    ╚██████╔╝██║  ██║██║ ╚═╝ ██║███████╗██╗\n\r ╚═════╝  ╚═════╝  ╚═════╝ ╚═════╝      ╚═════╝ ╚═╝  ╚═╝╚═╝     ╚═╝╚══════╝╚═╝\n";
     let goodbye_msg2: &str = "████████╗██╗  ██╗ █████╗ ███╗   ██╗██╗  ██╗███████╗\n\r╚══██╔══╝██║  ██║██╔══██╗████╗  ██║██║ ██╔╝██╔════╝\n\r   ██║   ███████║███████║██╔██╗ ██║█████╔╝ ███████╗\n\r   ██║   ██╔══██║██╔══██║██║╚██╗██║██╔═██╗ ╚════██║\n\r   ██║   ██║  ██║██║  ██║██║ ╚████║██║  ██╗███████║██╗\n\r   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝╚══════╝╚═╝\n";
     let _ = sc.queue(Clear(crossterm::terminal::ClearType::All));
@@ -412,7 +429,7 @@ fn physics(world: &mut World) {
     if world.gas >= 1 { world.gas -= 1; }
 }
 
-fn handle_pressed_keys(world: &mut World) {
+fn handle_pressed_keys(sc : &mut Stdout  , world: &mut World) {
     if poll(Duration::from_millis(10)).unwrap() {
         let key = read().unwrap();
 
@@ -434,8 +451,8 @@ fn handle_pressed_keys(world: &mut World) {
                     KeyCode::Left => if world.status == PlayerStatus::Alive && world.player_location.c > 1 { world.player_location.c -= 1 },
                     KeyCode::Right => if world.status == PlayerStatus::Alive && world.player_location.c < world.maxc - 1 { world.player_location.c += 1},
                     KeyCode::Char('p') => {
-                        if world.status == PlayerStatus::Alive { world.status = PlayerStatus::Paused;}
-                        else if world.status == PlayerStatus::Paused { world.status = PlayerStatus::Alive;}
+                        if world.status == PlayerStatus::Alive {world.status = PlayerStatus::Paused;pause_screen(&sc, &world);}
+                        else if world.status == PlayerStatus::Paused {world.status = PlayerStatus::Alive;}
                     },
                     KeyCode::Char(' ') => if world.status == PlayerStatus::Alive && world.bullet.is_empty() {
                         let new_bullet = Bullet::new(world.player_location.c, world.player_location.l - 1, world.maxl / 4);
@@ -465,7 +482,7 @@ fn main() -> std::io::Result<()> {
 
     while world.status == PlayerStatus::Alive || world.status == PlayerStatus::Paused {
         
-        handle_pressed_keys(&mut world);
+        handle_pressed_keys(&mut sc ,&mut world);
         if world.status != PlayerStatus::Paused {
             physics(&mut world);
             draw(&sc, &mut world)?;
@@ -475,7 +492,7 @@ fn main() -> std::io::Result<()> {
 
     // game is finished
     sc.queue(Clear(crossterm::terminal::ClearType::All))?;
-    goodbye_screen(&sc, &world);
+    goodbye_screen(&mut sc, &world);
     sc.queue(Clear(crossterm::terminal::ClearType::All))?
     .execute(Show)?;    
     disable_raw_mode()?;
