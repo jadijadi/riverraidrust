@@ -31,6 +31,12 @@ struct Enemy {
     status: EnemyStatus
 }
 
+
+struct Fuel {
+    location: Location,
+    status: EnemyStatus
+}
+
 impl Location {
 
     fn new(c: u16, l: u16) -> Location {
@@ -48,6 +54,15 @@ impl Location {
     // check if two locations is point to the same location
     fn hit(&self, other: &Location) -> bool {
         self.hit_with_margin(other,0,0,0,0)
+    }
+}
+
+impl Fuel {
+    fn new(column: u16, line: u16, status: EnemyStatus) -> Fuel {
+        Fuel {
+            location: Location::new(column, line),
+            status: status,
+        }
     }
 }
 
@@ -88,7 +103,10 @@ struct World {
     next_left: u16,
     ship: String,
     enemy: Vec<Enemy>,
+    fuel: Vec<Fuel>,
     bullet: Vec<Bullet>,
+    gas: u16,
+    score: u16,
 }
 
 impl World {
@@ -105,6 +123,9 @@ impl World {
             ship: 'P'.to_string(),
             enemy: Vec::new(),
             bullet: Vec::new(),
+            fuel: Vec::new(),
+            score: 0,
+            gas: 1700,
         }
     }
 
@@ -119,6 +140,23 @@ fn draw(mut sc: &Stdout, world: &mut World) -> std::io::Result<()> {
             .queue(Print("+".repeat(world.map[l].0 as usize)))?
             .queue(MoveTo(world.map[l].1, l as u16))?
             .queue(Print("+".repeat((world.maxc - world.map[l].1) as usize)))?;
+    }
+
+    sc.queue(MoveTo(2, 2))?
+    .queue(Print(format!(" Score: {} ", world.score)))?
+    .queue(MoveTo(2, 3))?
+    .queue(Print(format!(" Fuel: {} ", world.gas / 100 )))?;
+
+    // draw fuel
+    for index in (0..world.fuel.len()).rev() {
+        match world.fuel[index].status {
+            EnemyStatus::Alive => {sc.queue(MoveTo(world.fuel[index].location.c, world.fuel[index].location.l))?.queue(Print("F"))?;},
+            EnemyStatus::DeadBody => {
+                sc.queue(MoveTo(world.fuel[index].location.c, world.fuel[index].location.l))?.queue(Print("$"))?;
+                world.fuel[index].status = EnemyStatus::Dead;
+            },
+            EnemyStatus::Dead => {world.fuel.remove(index);}
+        };
     }
 
     // draw enemies
@@ -151,10 +189,31 @@ fn draw(mut sc: &Stdout, world: &mut World) -> std::io::Result<()> {
 
 /// check if player hit the ground
 fn check_player_status(world: &mut World) {
-
     if world.player_location.c < world.map[world.player_location.l as usize].0 ||
         world.player_location.c >= world.map[world.player_location.l as usize].1 {
         world.status = PlayerStatus::Dead;
+    }
+
+    if world.gas == 0 {
+        world.status = PlayerStatus::Dead;
+    }
+
+}
+
+/// check if fuel is hit / moved over
+fn check_fuel_status(world: &mut World) {
+
+    for index in (0..world.fuel.len()).rev() {
+        if matches!(world.fuel[index].status,EnemyStatus::Alive) && 
+            world.player_location.hit(&world.fuel[index].location) {
+            world.gas += 200;
+        };
+        for j in (0..world.bullet.len()).rev() {                
+            if world.bullet[j].location.hit_with_margin(&world.fuel[index].location,1,0,1,0) {
+                world.fuel[index].status = EnemyStatus::DeadBody;
+                world.score += 20;
+            }
+        }
     }
 
 }
@@ -163,7 +222,6 @@ fn check_player_status(world: &mut World) {
 fn check_enemy_status(world: &mut World) {
 
     for index in (0..world.enemy.len()).rev() {
-
         if matches!(world.enemy[index].status,EnemyStatus::Alive) && 
             world.player_location.hit(&world.enemy[index].location) {
             world.status = PlayerStatus::Dead
@@ -171,6 +229,7 @@ fn check_enemy_status(world: &mut World) {
         for j in (0..world.bullet.len()).rev() {                
             if world.bullet[j].location.hit_with_margin(&world.enemy[index].location,1,0,1,0) {
                 world.enemy[index].status = EnemyStatus::DeadBody;
+                world.score += 10;
             }
         }
     }
@@ -213,6 +272,22 @@ fn update_map(rng: &mut ThreadRng, world: &mut World) {
     world.map.push_front((left, right))
 }
 
+/// Create a new fuel; maybe
+fn create_fuel(rng: &mut ThreadRng, world: &mut World) {
+
+    // Possibility
+    if rng.gen_range(0..100) >= 99 {
+        world.fuel.push(
+            Fuel::new(
+                rng.gen_range(world.map[0].0..world.map[0].1),
+                0,
+                EnemyStatus::Alive
+            )
+        );
+    }
+
+}
+
 /// Create a new enemy
 fn create_enemy(rng: &mut ThreadRng, world: &mut World) {
 
@@ -225,6 +300,20 @@ fn create_enemy(rng: &mut ThreadRng, world: &mut World) {
                 EnemyStatus::Alive
             )
         );
+    }
+
+}
+
+/// Move fuels on the river
+fn move_fuel(world: &mut World) {
+
+    for index in (0..world.fuel.len()).rev() {
+
+        world.fuel[index].location.l += 1;
+        if world.fuel[index].location.l >= world.maxl {
+            world.fuel.remove(index);
+        }
+
     }
 
 }
@@ -305,16 +394,22 @@ fn physics(world: &mut World) {
 
     // check enemy hit something
     check_enemy_status(world);
+    check_fuel_status(world);
 
     // move the map Downward
     update_map(&mut rng, world);
 
     // create new enemy
     create_enemy(&mut rng, world);
+    create_fuel(&mut rng, world);
+    
     
     // Move elements along map movements
     move_enemies(world);
+    move_fuel(world);
     move_bullets(world);
+
+    if world.gas >= 1 { world.gas -= 1; }
 }
 
 fn handle_pressed_keys(world: &mut World) {
