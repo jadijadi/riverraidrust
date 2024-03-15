@@ -379,7 +379,6 @@ fn main() -> std::io::Result<()> {
     }
 
     // game is finished
-
     sc.queue(Clear(crossterm::terminal::ClearType::All))?;
     goodbye_screen(&sc, &world);
     sc.queue(Clear(crossterm::terminal::ClearType::All))?
