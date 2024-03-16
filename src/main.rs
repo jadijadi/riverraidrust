@@ -405,6 +405,19 @@ fn welcome_screen(mut sc: &Stdout, world: &World) {
     let _ = sc.queue(Clear(crossterm::terminal::ClearType::All));
 }
 
+fn pause_screen(mut sc: &Stdout , world: &World) {
+    let pause_msg1: &str = "╔═══════════╗";
+    let pause_msg2: &str = "║Game Paused║";
+    let pause_msg3: &str = "╚═══════════╝";
+    let _ = sc.queue(MoveTo(world.maxc / 2 - 6, world.maxl / 2 - 1));
+    let _ = sc.queue(Print(pause_msg1));
+    let _ = sc.queue(MoveTo(world.maxc / 2 - 6, world.maxl / 2));
+    let _ = sc.queue(Print(pause_msg2));
+    let _ = sc.queue(MoveTo(world.maxc / 2 - 6, world.maxl / 2 + 1));
+    let _ = sc.queue(Print(pause_msg3));
+    let _ = sc.flush();
+}
+
 fn goodbye_screen(mut sc: &Stdout, world: &World) {
     let goodbye_msg1: &str = " ██████╗  ██████╗  ██████╗ ██████╗      ██████╗  █████╗ ███╗   ███╗███████╗██╗\n\r██╔════╝ ██╔═══██╗██╔═══██╗██╔══██╗    ██╔════╝ ██╔══██╗████╗ ████║██╔════╝██║\n\r██║  ███╗██║   ██║██║   ██║██║  ██║    ██║  ███╗███████║██╔████╔██║█████╗  ██║\n\r██║   ██║██║   ██║██║   ██║██║  ██║    ██║   ██║██╔══██║██║╚██╔╝██║██╔══╝  ╚═╝\n\r╚██████╔╝╚██████╔╝╚██████╔╝██████╔╝    ╚██████╔╝██║  ██║██║ ╚═╝ ██║███████╗██╗\n\r ╚═════╝  ╚═════╝  ╚═════╝ ╚═════╝      ╚═════╝ ╚═╝  ╚═╝╚═╝     ╚═╝╚══════╝╚═╝\n";
     let goodbye_msg2: &str = "████████╗██╗  ██╗ █████╗ ███╗   ██╗██╗  ██╗███████╗\n\r╚══██╔══╝██║  ██║██╔══██╗████╗  ██║██║ ██╔╝██╔════╝\n\r   ██║   ███████║███████║██╔██╗ ██║█████╔╝ ███████╗\n\r   ██║   ██╔══██║██╔══██║██║╚██╗██║██╔═██╗ ╚════██║\n\r   ██║   ██║  ██║██║  ██║██║ ╚████║██║  ██╗███████║██╗\n\r   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝╚══════╝╚═╝\n";
@@ -586,6 +599,8 @@ fn main() -> std::io::Result<()> {
         if world.status != PlayerStatus::Paused {
             physics(&mut world);
             draw(&sc, &mut world)?;
+        } else {
+            pause_screen(&sc, &world);
         }
         thread::sleep(time::Duration::from_millis(slowness));
     }
