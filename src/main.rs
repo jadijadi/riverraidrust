@@ -38,6 +38,12 @@ enum DeathCause {
     Fuel,
 }
 
+#[derive(PartialEq, Eq)]
+enum GameMode {
+    Normal,
+    God,
+}
+
 struct Location {
     c: u16,
     l: u16,
@@ -125,6 +131,7 @@ struct World {
     gas: u16,
     score: u16,
     death_cause: DeathCause,
+    game_mode: GameMode,
 }
 
 impl World {
@@ -144,6 +151,7 @@ impl World {
             score: 0,
             gas: 1700,
             death_cause: DeathCause::None,
+            game_mode: GameMode::Normal,
         }
     }
 }
@@ -163,6 +171,10 @@ fn draw(mut sc: &Stdout, world: &mut World) -> std::io::Result<()> {
         .queue(Print(format!(" Score: {} ", world.score)))?
         .queue(MoveTo(2, 3))?
         .queue(Print(format!(" Fuel: {} ", world.gas / 100)))?;
+
+    if world.game_mode == GameMode::God {
+        draw_god_mode(sc);
+    }
 
     // draw fuel
     for index in (0..world.fuel.len()).rev() {
@@ -418,11 +430,16 @@ fn pause_screen(mut sc: &Stdout , world: &World) {
     let _ = sc.flush();
 }
 
+fn draw_god_mode(mut sc: &Stdout) {
+    let msg: &str = " GOD MODE: ON ";
+    let _ = sc.queue(MoveTo(2, 4));
+    let _ = sc.queue(Print(msg));
+}
+
 fn goodbye_screen(mut sc: &Stdout, world: &World) {
     let goodbye_msg1: &str = " ██████╗  ██████╗  ██████╗ ██████╗      ██████╗  █████╗ ███╗   ███╗███████╗██╗\n\r██╔════╝ ██╔═══██╗██╔═══██╗██╔══██╗    ██╔════╝ ██╔══██╗████╗ ████║██╔════╝██║\n\r██║  ███╗██║   ██║██║   ██║██║  ██║    ██║  ███╗███████║██╔████╔██║█████╗  ██║\n\r██║   ██║██║   ██║██║   ██║██║  ██║    ██║   ██║██╔══██║██║╚██╔╝██║██╔══╝  ╚═╝\n\r╚██████╔╝╚██████╔╝╚██████╔╝██████╔╝    ╚██████╔╝██║  ██║██║ ╚═╝ ██║███████╗██╗\n\r ╚═════╝  ╚═════╝  ╚═════╝ ╚═════╝      ╚═════╝ ╚═╝  ╚═╝╚═╝     ╚═╝╚══════╝╚═╝\n";
     let goodbye_msg2: &str = "████████╗██╗  ██╗ █████╗ ███╗   ██╗██╗  ██╗███████╗\n\r╚══██╔══╝██║  ██║██╔══██╗████╗  ██║██║ ██╔╝██╔════╝\n\r   ██║   ███████║███████║██╔██╗ ██║█████╔╝ ███████╗\n\r   ██║   ██╔══██║██╔══██║██║╚██╗██║██╔═██╗ ╚════██║\n\r   ██║   ██║  ██║██║  ██║██║ ╚████║██║  ██╗███████║██╗\n\r   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝╚══════╝╚═╝\n";
     let _ = sc.queue(Clear(crossterm::terminal::ClearType::All));
-
     let _ = sc.queue(MoveTo(0, 2));
     let _ = sc.queue(Print(goodbye_msg1));
     let _ = sc.queue(MoveTo(0, 10));
@@ -507,6 +524,13 @@ fn handle_pressed_keys(world: &mut World) {
                 // I'm reading from keyboard into event
                 match event.code {
                     KeyCode::Char('q') => world.status = PlayerStatus::Quit,
+                    KeyCode::Char('g') => {
+                        if world.game_mode == GameMode::Normal {
+                            world.game_mode = GameMode::God;
+                        } else if world.game_mode == GameMode::God {
+                            world.game_mode = GameMode::Normal;
+                        }
+                    }
                     KeyCode::Char('w') => {
                         if world.status == PlayerStatus::Alive && world.player_location.l > 1 {
                             world.player_location.l -= 1
@@ -598,6 +622,14 @@ fn main() -> std::io::Result<()> {
         handle_pressed_keys(&mut world);
         if world.status != PlayerStatus::Paused {
             physics(&mut world);
+            match world.game_mode {
+                GameMode::God => {
+                    if world.status != PlayerStatus::Quit {
+                        world.status = PlayerStatus::Alive;
+                    }
+                }
+                GameMode::Normal => {}
+            }
             draw(&sc, &mut world)?;
         } else {
             pause_screen(&sc, &world);
