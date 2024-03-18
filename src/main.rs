@@ -433,6 +433,7 @@ fn goodbye_screen(mut sc: &Stdout, world: &World) {
         DeathCause::Ground => {
             if world.maxc > 91 {
                 let _ = sc.queue(Print("\r█▄█ █▀█ █░█   █▀▀ █▀█ ▄▀█ █▀ █░█ █▀▀ █▀▄   █ █▄░█   ▀█▀ █░█ █▀▀   █▀▀ █▀█ █▀█ █░█ █▄░█ █▀▄ ░\n\r░█░ █▄█ █▄█   █▄▄ █▀▄ █▀█ ▄█ █▀█ ██▄ █▄▀   █ █░▀█   ░█░ █▀█ ██▄   █▄█ █▀▄ █▄█ █▄█ █░▀█ █▄▀ ▄\n\r"));
+                thread::sleep(time::Duration::from_millis(2000));
             } else {
                 let _ = sc.queue(Print("You crashed in the ground."));
             }
@@ -440,6 +441,7 @@ fn goodbye_screen(mut sc: &Stdout, world: &World) {
         DeathCause::Enemy => {
             if world.maxc > 72 {
                 let _ = sc.queue(Print("\r▄▀█ █▄░█   █▀▀ █▄░█ █▀▀ █▀▄▀█ █▄█   █▄▀ █ █░░ █░░ █▀▀ █▀▄   █▄█ █▀█ █░█ ░\n\r█▀█ █░▀█   ██▄ █░▀█ ██▄ █░▀░█ ░█░   █░█ █ █▄▄ █▄▄ ██▄ █▄▀   ░█░ █▄█ █▄█ ▄\n\r"));
+                thread::sleep(time::Duration::from_millis(2000));
             } else {
                 let _ = sc.queue(Print("An enemy killed you."));
             }
