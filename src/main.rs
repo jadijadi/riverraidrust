@@ -314,8 +314,8 @@ fn update_map(rng: &mut ThreadRng, world: &mut World) {
         }
     }
 
-    if world.next_right.abs_diff(world.next_left) < 3 {
-        world.next_right += 3;
+    if world.next_right.abs_diff(world.next_left) < 8 {
+        world.next_right += 8;
     }
     world.map.push_front((left, right))
 }
