@@ -15,6 +15,27 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode, size, Clear},
     ExecutableCommand, QueueableCommand,
 };
+// Constants
+// Drawing
+const SLOWNESS: u64 = 100;
+// Gas
+const STARTING_GAS: u16 = 1700;
+const GAS_INCREASEMENT: u16 = 200;
+// Chars
+const GROUND_CHAR: &str = "+";
+const FUEL_CHAR: &str = "F";
+const FUEL_DEADBODY_CHAR: &str = "$";
+const ENEMY_CHAR: &str = "E";
+const ENEMY_DEADBODY_CHAR: &str = "X";
+const BULLET_HEAD_CHAR: &str = "|";
+const BULLET_BODY_CHAR: &str = "^";
+const PLAYER_CHAR: &str = "P";
+// Scores
+const SCORE_HIT_FUEL: u16 = 20;
+const SCORE_HIT_ENEMY: u16 = 10;
+// Chance (in 100)
+const CHANCE_SPAWN_FUEL: u16 = 1;
+const CHANCE_SPAWN_ENEMY: u16 = 10;
 
 #[derive(PartialEq, Eq)]
 enum PlayerStatus {
@@ -118,7 +139,6 @@ struct World {
     status: PlayerStatus,
     next_right: u16,
     next_left: u16,
-    ship: String,
     enemy: Vec<Enemy>,
     fuel: Vec<Fuel>,
     bullet: Vec<Bullet>,
@@ -137,12 +157,11 @@ impl World {
             status: PlayerStatus::Alive,
             next_left: maxc / 2 - 7,
             next_right: maxc / 2 + 7,
-            ship: 'P'.to_string(),
             enemy: Vec::new(),
             bullet: Vec::new(),
             fuel: Vec::new(),
             score: 0,
-            gas: 1700,
+            gas: STARTING_GAS,
             death_cause: DeathCause::None,
         }
     }
@@ -156,7 +175,7 @@ fn draw(mut sc: &Stdout, world: &mut World) -> std::io::Result<()> {
         sc.queue(MoveTo(0, l as u16))?
             .queue(Print("+".repeat(world.map[l].0 as usize)))?
             .queue(MoveTo(world.map[l].1, l as u16))?
-            .queue(Print("+".repeat((world.maxc - world.map[l].1) as usize)))?;
+            .queue(Print(GROUND_CHAR.repeat((world.maxc - world.map[l].1) as usize)))?;
     }
 
     sc.queue(MoveTo(2, 2))?
@@ -172,14 +191,14 @@ fn draw(mut sc: &Stdout, world: &mut World) -> std::io::Result<()> {
                     world.fuel[index].location.c,
                     world.fuel[index].location.l,
                 ))?
-                .queue(Print("F"))?;
+                .queue(Print(FUEL_CHAR))?;
             }
             EnemyStatus::DeadBody => {
                 sc.queue(MoveTo(
                     world.fuel[index].location.c,
                     world.fuel[index].location.l,
                 ))?
-                .queue(Print("$"))?;
+                .queue(Print(FUEL_DEADBODY_CHAR))?;
                 world.fuel[index].status = EnemyStatus::Dead;
             }
             EnemyStatus::Dead => {
@@ -196,14 +215,14 @@ fn draw(mut sc: &Stdout, world: &mut World) -> std::io::Result<()> {
                     world.enemy[index].location.c,
                     world.enemy[index].location.l,
                 ))?
-                .queue(Print("E"))?;
+                .queue(Print(ENEMY_CHAR))?;
             }
             EnemyStatus::DeadBody => {
                 sc.queue(MoveTo(
                     world.enemy[index].location.c,
                     world.enemy[index].location.l,
                 ))?
-                .queue(Print("X"))?;
+                .queue(Print(ENEMY_DEADBODY_CHAR))?;
                 world.enemy[index].status = EnemyStatus::Dead;
             }
             EnemyStatus::Dead => {
@@ -215,14 +234,14 @@ fn draw(mut sc: &Stdout, world: &mut World) -> std::io::Result<()> {
     // draw bullet
     for b in &world.bullet {
         sc.queue(MoveTo(b.location.c, b.location.l))?
-            .queue(Print("|"))?
+            .queue(Print(BULLET_HEAD_CHAR))?
             .queue(MoveTo(b.location.c, b.location.l - 1))?
-            .queue(Print("^"))?;
+            .queue(Print(BULLET_BODY_CHAR))?;
     }
 
     // draw the player
     sc.queue(MoveTo(world.player_location.c, world.player_location.l))?
-        .queue(Print(world.ship.as_str()))?
+        .queue(Print(PLAYER_CHAR))?
         .flush()?;
 
     Ok(())
@@ -249,7 +268,7 @@ fn check_fuel_status(world: &mut World) {
         if matches!(world.fuel[index].status, EnemyStatus::Alive)
             && world.player_location.hit(&world.fuel[index].location)
         {
-            world.gas += 200;
+            world.gas += GAS_INCREASEMENT;
         };
         for j in (0..world.bullet.len()).rev() {
             if world.bullet[j]
@@ -257,7 +276,7 @@ fn check_fuel_status(world: &mut World) {
                 .hit_with_margin(&world.fuel[index].location, 1, 0, 1, 0)
             {
                 world.fuel[index].status = EnemyStatus::DeadBody;
-                world.score += 20;
+                world.score += SCORE_HIT_FUEL;
             }
         }
     }
@@ -278,7 +297,7 @@ fn check_enemy_status(world: &mut World) {
                 .hit_with_margin(&world.enemy[index].location, 1, 0, 1, 0)
             {
                 world.enemy[index].status = EnemyStatus::DeadBody;
-                world.score += 10;
+                world.score += SCORE_HIT_ENEMY;
             }
         }
     }
@@ -323,7 +342,7 @@ fn update_map(rng: &mut ThreadRng, world: &mut World) {
 /// Create a new fuel; maybe
 fn create_fuel(rng: &mut ThreadRng, world: &mut World) {
     // Possibility
-    if rng.gen_range(0..100) >= 99 {
+    if rng.gen_range(0..100) <= CHANCE_SPAWN_FUEL {
         world.fuel.push(Fuel::new(
             rng.gen_range(world.map[0].0..world.map[0].1),
             0,
@@ -335,7 +354,7 @@ fn create_fuel(rng: &mut ThreadRng, world: &mut World) {
 /// Create a new enemy
 fn create_enemy(rng: &mut ThreadRng, world: &mut World) {
     // Possibility
-    if rng.gen_range(0..10) >= 9 {
+    if rng.gen_range(0..100) <= CHANCE_SPAWN_ENEMY {
         world.enemy.push(Enemy::new(
             rng.gen_range(world.map[0].0..world.map[0].1),
             0,
@@ -588,7 +607,6 @@ fn main() -> std::io::Result<()> {
     enable_raw_mode()?;
 
     // init the world
-    let slowness = 100;
     let mut world = World::new(maxc, maxl);
 
     // show welcoming banner
@@ -602,7 +620,7 @@ fn main() -> std::io::Result<()> {
         } else {
             pause_screen(&sc, &world);
         }
-        thread::sleep(time::Duration::from_millis(slowness));
+        thread::sleep(time::Duration::from_millis(SLOWNESS));
     }
 
     // game is finished
