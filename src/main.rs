@@ -306,17 +306,30 @@ fn update_map(rng: &mut ThreadRng, world: &mut World) {
         if world.next_left == 0 {
             world.next_left = 1;
         }
+        if world.next_left >= world.maxc {
+            world.next_left = Wrapping(world.maxc).0 - 1;
+        }
     }
     if world.next_right == world.map[0].1 && rng.gen_range(0..10) >= 7 {
-        world.next_right = rng.gen_range(world.next_right - 5..world.next_right + 5);
-        if world.next_right > world.maxc {
+        world.next_right = rng.gen_range(world.next_right.saturating_sub(5)..world.next_right + 5);
+        if world.next_right >= world.maxc {
             world.next_right = Wrapping(world.maxc).0 - 1;
         }
     }
 
-    if world.next_right.abs_diff(world.next_left) < 3 {
-        world.next_right += 3;
+    if world.next_left >= world.next_right {
+        if world.next_left <= world.maxc - 4 {
+            world.next_right = world.next_left + 3;
+        }
+        else {
+            world.next_left = world.next_right - 3;
+        }
     }
+
+    if world.next_right.abs_diff(world.next_left) < 3 {
+        world.next_right = world.next_left + 3;
+    }
+
     world.map.push_front((left, right))
 }
 
