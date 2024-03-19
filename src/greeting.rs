@@ -2,9 +2,9 @@
 
 
 pub mod greeting {
+    use core::time;
     use std::{
-        io::{Stdout, Write},
-        time::Duration,
+        io::{Stdout, Write}, thread, time::Duration
     };
     use crossterm::{
         cursor::MoveTo,
@@ -52,6 +52,7 @@ pub mod greeting {
         }
     
         let _ = sc.queue(MoveTo(2, world.maxl -2));
+        thread::sleep(time::Duration::from_millis(2000));
         let _ = sc.queue(Print("Press any key to continue..."));
         let _ = sc.flush();
         loop {

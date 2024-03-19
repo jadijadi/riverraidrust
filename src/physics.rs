@@ -109,6 +109,7 @@ pub mod physics {
             if matches!(world.fuel[index].status, EnemyStatus::Alive)
                 && world.player_location.hit(&world.fuel[index].location)
             {
+                world.fuel[index].status = EnemyStatus::DeadBody;
                 world.gas += 200;
             };
             for j in (0..world.bullet.len()).rev() {
