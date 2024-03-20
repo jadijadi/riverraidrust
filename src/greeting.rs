@@ -3,7 +3,6 @@ use crossterm::{
     cursor::MoveTo,
     event::{poll, read},
     style::Print,
-    terminal::Clear,
     QueueableCommand,
 };
 use std::{
@@ -62,7 +61,7 @@ pub fn goodbye_screen(sc: &mut Stdout, world: &World) -> Result<(), std::io::Err
         }
     }
 
-    sc.queue(Clear(crossterm::terminal::ClearType::All))?;
+    sc.clear_all()?;
     Ok(())
 }
 
