@@ -1,9 +1,9 @@
-use crossterm::{cursor::MoveTo, style::Print, terminal::Clear, QueueableCommand};
-
 use std::{
     collections::VecDeque,
     io::{Stdout, Write},
 };
+
+use crate::{drawable::Drawable, stout_ext::StdoutExt};
 
 #[derive(PartialEq, Eq)]
 pub enum PlayerStatus {
@@ -26,13 +26,14 @@ pub enum DeathCause {
     Fuel,
 }
 
+#[derive(Clone)]
 pub struct Location {
     pub c: u16,
     pub l: u16,
 }
 
 impl Location {
-    pub fn new(c: u16, l: u16) -> Location {
+    pub fn new(c: u16, l: u16) -> Self {
         Location { c, l }
     }
 
@@ -99,119 +100,102 @@ impl Fuel {
     }
 } // end of Fuel implementation.
 
-pub struct World {
-    pub player_location: Location,
-    pub map: VecDeque<(u16, u16)>,
-    pub maxc: u16,
-    pub maxl: u16,
+pub struct Player {
+    pub location: Location,
     pub status: PlayerStatus,
-    pub next_right: u16,
-    pub next_left: u16,
-    pub ship: String,
-    pub enemy: Vec<Enemy>,
-    pub fuel: Vec<Fuel>,
-    pub bullet: Vec<Bullet>,
     pub gas: u16,
     pub score: u16,
     pub death_cause: DeathCause,
 }
 
+pub struct World {
+    pub player: Player,
+    pub map: VecDeque<(u16, u16)>,
+    pub maxc: u16,
+    pub maxl: u16,
+    pub next_right: u16,
+    pub next_left: u16,
+    pub enemy: Vec<Enemy>,
+    pub fuel: Vec<Fuel>,
+    pub bullet: Vec<Bullet>,
+}
+
 impl World {
     pub fn new(maxc: u16, maxl: u16) -> World {
         World {
-            player_location: Location::new(maxc / 2, maxl - 1),
+            player: Player {
+                location: Location::new(maxc / 2, maxl - 1),
+                status: PlayerStatus::Alive,
+                score: 0,
+                gas: 1700,
+                death_cause: DeathCause::None,
+            },
             map: VecDeque::from(vec![(maxc / 2 - 5, maxc / 2 + 5); maxl as usize]),
             maxc,
             maxl,
-            status: PlayerStatus::Alive,
             next_left: maxc / 2 - 7,
             next_right: maxc / 2 + 7,
-            ship: 'P'.to_string(),
             enemy: Vec::new(),
             bullet: Vec::new(),
             fuel: Vec::new(),
-            score: 0,
-            gas: 1700,
-            death_cause: DeathCause::None,
         }
     }
 
-    pub fn draw(&mut self, mut sc: &Stdout) -> std::io::Result<()> {
-        sc.queue(Clear(crossterm::terminal::ClearType::All))?;
+    pub fn draw(&mut self, sc: &mut Stdout) -> std::io::Result<()> {
+        sc.clear_all()?;
 
         // draw the map
         for l in 0..self.map.len() {
-            sc.queue(MoveTo(0, l as u16))?
-                .queue(Print("+".repeat(self.map[l].0 as usize)))?
-                .queue(MoveTo(self.map[l].1, l as u16))?
-                .queue(Print("+".repeat((self.maxc - self.map[l].1) as usize)))?;
+            sc.draw((0, l as u16), "+".repeat(self.map[l].0 as usize))?
+                .draw(
+                    (self.map[l].1, l as u16),
+                    "+".repeat((self.maxc - self.map[l].1) as usize),
+                )?;
         }
 
-        sc.queue(MoveTo(2, 2))?
-            .queue(Print(format!(" Score: {} ", self.score)))?
-            .queue(MoveTo(2, 3))?
-            .queue(Print(format!(" Fuel: {} ", self.gas / 100)))?;
+        sc.draw(2, format!(" Score: {} ", self.player.score))?
+            .draw((2, 3), format!(" Fuel: {} ", self.player.gas / 100))?;
 
         // draw fuel
-        for index in (0..self.fuel.len()).rev() {
-            match self.fuel[index].status {
-                EnemyStatus::Alive => {
-                    sc.queue(MoveTo(
-                        self.fuel[index].location.c,
-                        self.fuel[index].location.l,
-                    ))?
-                    .queue(Print("F"))?;
-                }
+        self.fuel.retain_mut(|fuel| {
+            match fuel.status {
                 EnemyStatus::DeadBody => {
-                    sc.queue(MoveTo(
-                        self.fuel[index].location.c,
-                        self.fuel[index].location.l,
-                    ))?
-                    .queue(Print("$"))?;
-                    self.fuel[index].status = EnemyStatus::Dead;
+                    fuel.status = EnemyStatus::Dead;
                 }
                 EnemyStatus::Dead => {
-                    self.fuel.remove(index);
+                    return false;
                 }
+                _ => {}
             };
-        }
+            let _ = fuel.draw(sc);
+            true
+        });
 
         // draw enemies
-        for index in (0..self.enemy.len()).rev() {
-            match self.enemy[index].status {
-                EnemyStatus::Alive => {
-                    sc.queue(MoveTo(
-                        self.enemy[index].location.c,
-                        self.enemy[index].location.l,
-                    ))?
-                    .queue(Print("E"))?;
-                }
+        self.enemy.retain_mut(|enemy| {
+            match enemy.status {
                 EnemyStatus::DeadBody => {
-                    sc.queue(MoveTo(
-                        self.enemy[index].location.c,
-                        self.enemy[index].location.l,
-                    ))?
-                    .queue(Print("X"))?;
-                    self.enemy[index].status = EnemyStatus::Dead;
+                    enemy.status = EnemyStatus::Dead;
                 }
                 EnemyStatus::Dead => {
-                    self.enemy.remove(index);
+                    return false;
                 }
+                _ => {}
             };
-        }
+            let _ = enemy.draw(sc);
+            true
+        });
 
         // draw bullet
         for b in &self.bullet {
-            sc.queue(MoveTo(b.location.c, b.location.l))?
-                .queue(Print("|"))?
-                .queue(MoveTo(b.location.c, b.location.l - 1))?
-                .queue(Print("^"))?;
+            b.draw(sc)?;
         }
 
         // draw the player
-        sc.queue(MoveTo(self.player_location.c, self.player_location.l))?
-            .queue(Print(self.ship.as_str()))?
-            .flush()?;
+        self.player.draw(sc)?;
+
+        // Flush everything to the screen.
+        sc.flush()?;
 
         Ok(())
     }

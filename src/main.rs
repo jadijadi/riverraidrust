@@ -1,16 +1,19 @@
 use rand::thread_rng;
 use std::io::stdout;
 use std::{thread, time};
+use stout_ext::StdoutExt;
 
 use crossterm::{
     cursor::{Hide, Show},
-    terminal::{disable_raw_mode, enable_raw_mode, size, Clear},
-    ExecutableCommand, QueueableCommand,
+    terminal::{disable_raw_mode, enable_raw_mode, size},
+    ExecutableCommand,
 };
 
+mod drawable;
 mod events;
 mod greeting;
 mod physics;
+mod stout_ext;
 mod world;
 
 use events::*;
@@ -42,8 +45,8 @@ fn physics(world: &mut World) {
     move_fuel(world);
     move_bullets(world);
 
-    if world.gas >= 1 {
-        world.gas -= 1;
+    if world.player.gas >= 1 {
+        world.player.gas -= 1;
     }
 }
 
@@ -59,24 +62,24 @@ fn main() -> std::io::Result<()> {
     let mut world = World::new(maxc, maxl);
 
     // show welcoming banner
-    welcome_screen(&sc, &world);
+    welcome_screen(&mut sc, &world)?;
 
-    while world.status == PlayerStatus::Alive || world.status == PlayerStatus::Paused {
+    while world.player.status == PlayerStatus::Alive || world.player.status == PlayerStatus::Paused
+    {
         handle_pressed_keys(&mut world);
-        if world.status != PlayerStatus::Paused {
+        if world.player.status != PlayerStatus::Paused {
             physics(&mut world);
-            world.draw(&sc)?;
+            world.draw(&mut sc)?;
         } else {
-            pause_screen(&sc, &world);
+            pause_screen(&mut sc, &world)?;
         }
         thread::sleep(time::Duration::from_millis(slowness));
     }
 
     // game is finished
-    sc.queue(Clear(crossterm::terminal::ClearType::All))?;
-    goodbye_screen(&sc, &world);
-    sc.queue(Clear(crossterm::terminal::ClearType::All))?
-        .execute(Show)?;
+    sc.clear_all()?;
+    goodbye_screen(&mut sc, &world)?;
+    sc.clear_all()?.execute(Show)?;
     disable_raw_mode()?;
     Ok(())
 }

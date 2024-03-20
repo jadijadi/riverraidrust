@@ -1,21 +1,20 @@
 use rand::{rngs::ThreadRng, Rng};
-use std::cmp::Ordering::*;
 use std::num::Wrapping;
 
 use crate::world::{DeathCause, Enemy, EnemyStatus, Fuel, PlayerStatus, World};
 
 /// check if player hit the ground
 pub fn check_player_status(world: &mut World) {
-    if world.player_location.c < world.map[world.player_location.l as usize].0
-        || world.player_location.c >= world.map[world.player_location.l as usize].1
+    if world.player.location.c < world.map[world.player.location.l as usize].0
+        || world.player.location.c >= world.map[world.player.location.l as usize].1
     {
-        world.status = PlayerStatus::Dead;
-        world.death_cause = DeathCause::Ground;
+        world.player.status = PlayerStatus::Dead;
+        world.player.death_cause = DeathCause::Ground;
     }
 
-    if world.gas == 0 {
-        world.status = PlayerStatus::Dead;
-        world.death_cause = DeathCause::Fuel;
+    if world.player.gas == 0 {
+        world.player.status = PlayerStatus::Dead;
+        world.player.death_cause = DeathCause::Fuel;
     }
 }
 
@@ -23,10 +22,10 @@ pub fn check_player_status(world: &mut World) {
 pub fn check_enemy_status(world: &mut World) {
     for index in (0..world.enemy.len()).rev() {
         if matches!(world.enemy[index].status, EnemyStatus::Alive)
-            && world.player_location.hit(&world.enemy[index].location)
+            && world.player.location.hit(&world.enemy[index].location)
         {
-            world.status = PlayerStatus::Dead;
-            world.death_cause = DeathCause::Enemy;
+            world.player.status = PlayerStatus::Dead;
+            world.player.death_cause = DeathCause::Enemy;
         };
         for j in (0..world.bullet.len()).rev() {
             if world.bullet[j]
@@ -34,7 +33,7 @@ pub fn check_enemy_status(world: &mut World) {
                 .hit_with_margin(&world.enemy[index].location, 1, 0, 1, 0)
             {
                 world.enemy[index].status = EnemyStatus::DeadBody;
-                world.score += 10;
+                world.player.score += 10;
             }
         }
     }
@@ -42,8 +41,9 @@ pub fn check_enemy_status(world: &mut World) {
 
 /// Update the map
 pub fn update_map(rng: &mut ThreadRng, world: &mut World) {
-    // move the map downward using VecDeque
+    use std::cmp::Ordering::*;
 
+    // move the map downward using VecDeque
     world.map.pop_back();
     let (mut left, mut right) = world.map[0];
     match world.next_left.cmp(&left) {
@@ -109,10 +109,10 @@ pub fn move_bullets(world: &mut World) {
 pub fn check_fuel_status(world: &mut World) {
     for index in (0..world.fuel.len()).rev() {
         if matches!(world.fuel[index].status, EnemyStatus::Alive)
-            && world.player_location.hit(&world.fuel[index].location)
+            && world.player.location.hit(&world.fuel[index].location)
         {
             world.fuel[index].status = EnemyStatus::DeadBody;
-            world.gas += 200;
+            world.player.gas += 200;
         };
         for j in (0..world.bullet.len()).rev() {
             if world.bullet[j]
@@ -120,7 +120,7 @@ pub fn check_fuel_status(world: &mut World) {
                 .hit_with_margin(&world.fuel[index].location, 1, 0, 1, 0)
             {
                 world.fuel[index].status = EnemyStatus::DeadBody;
-                world.score += 20;
+                world.player.score += 20;
             }
         }
     }

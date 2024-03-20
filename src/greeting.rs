@@ -1,4 +1,3 @@
-
 use core::time;
 use crossterm::{
     cursor::MoveTo,
@@ -13,75 +12,80 @@ use std::{
     time::Duration,
 };
 
-use crate::world::{DeathCause, World};
+use crate::{
+    stout_ext::StdoutExt,
+    world::{DeathCause, World},
+};
 
-pub fn goodbye_screen(mut sc: &Stdout, world: &World) {
+pub fn goodbye_screen(sc: &mut Stdout, world: &World) -> Result<(), std::io::Error> {
     let goodbye_msg1: &str = " ██████╗  ██████╗  ██████╗ ██████╗      ██████╗  █████╗ ███╗   ███╗███████╗██╗\n\r██╔════╝ ██╔═══██╗██╔═══██╗██╔══██╗    ██╔════╝ ██╔══██╗████╗ ████║██╔════╝██║\n\r██║  ███╗██║   ██║██║   ██║██║  ██║    ██║  ███╗███████║██╔████╔██║█████╗  ██║\n\r██║   ██║██║   ██║██║   ██║██║  ██║    ██║   ██║██╔══██║██║╚██╔╝██║██╔══╝  ╚═╝\n\r╚██████╔╝╚██████╔╝╚██████╔╝██████╔╝    ╚██████╔╝██║  ██║██║ ╚═╝ ██║███████╗██╗\n\r ╚═════╝  ╚═════╝  ╚═════╝ ╚═════╝      ╚═════╝ ╚═╝  ╚═╝╚═╝     ╚═╝╚══════╝╚═╝\n";
     let goodbye_msg2: &str = "████████╗██╗  ██╗ █████╗ ███╗   ██╗██╗  ██╗███████╗\n\r╚══██╔══╝██║  ██║██╔══██╗████╗  ██║██║ ██╔╝██╔════╝\n\r   ██║   ███████║███████║██╔██╗ ██║█████╔╝ ███████╗\n\r   ██║   ██╔══██║██╔══██║██║╚██╗██║██╔═██╗ ╚════██║\n\r   ██║   ██║  ██║██║  ██║██║ ╚████║██║  ██╗███████║██╗\n\r   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝╚══════╝╚═╝\n";
-    let _ = sc.queue(Clear(crossterm::terminal::ClearType::All));
 
-    let _ = sc.queue(MoveTo(0, 2));
-    let _ = sc.queue(Print(goodbye_msg1));
-    let _ = sc.queue(MoveTo(0, 10));
-    let _ = sc.queue(Print(goodbye_msg2));
-    let _ = sc.queue(MoveTo(2, world.maxl - 5));
-    match world.death_cause {
+    sc.clear_all()?
+        .draw((0, 2), goodbye_msg1)?
+        .draw((0, 10), goodbye_msg2)?;
+
+    sc.move_cursor((2, world.maxl - 5))?;
+    match world.player.death_cause {
         DeathCause::Ground => {
             if world.maxc > 91 {
-                let _ = sc.queue(Print("\r█▄█ █▀█ █░█   █▀▀ █▀█ ▄▀█ █▀ █░█ █▀▀ █▀▄   █ █▄░█   ▀█▀ █░█ █▀▀   █▀▀ █▀█ █▀█ █░█ █▄░█ █▀▄ ░\n\r░█░ █▄█ █▄█   █▄▄ █▀▄ █▀█ ▄█ █▀█ ██▄ █▄▀   █ █░▀█   ░█░ █▀█ ██▄   █▄█ █▀▄ █▄█ █▄█ █░▀█ █▄▀ ▄\n\r"));
+                sc.print("\r█▄█ █▀█ █░█   █▀▀ █▀█ ▄▀█ █▀ █░█ █▀▀ █▀▄   █ █▄░█   ▀█▀ █░█ █▀▀   █▀▀ █▀█ █▀█ █░█ █▄░█ █▀▄ ░\n\r░█░ █▄█ █▄█   █▄▄ █▀▄ █▀█ ▄█ █▀█ ██▄ █▄▀   █ █░▀█   ░█░ █▀█ ██▄   █▄█ █▀▄ █▄█ █▄█ █░▀█ █▄▀ ▄\n\r")?;
             } else {
-                let _ = sc.queue(Print("You crashed in the ground."));
+                sc.print("You crashed in the ground.")?;
             }
         }
         DeathCause::Enemy => {
             if world.maxc > 72 {
-                let _ = sc.queue(Print("\r▄▀█ █▄░█   █▀▀ █▄░█ █▀▀ █▀▄▀█ █▄█   █▄▀ █ █░░ █░░ █▀▀ █▀▄   █▄█ █▀█ █░█ ░\n\r█▀█ █░▀█   ██▄ █░▀█ ██▄ █░▀░█ ░█░   █░█ █ █▄▄ █▄▄ ██▄ █▄▀   ░█░ █▄█ █▄█ ▄\n\r"));
+                sc.print("\r▄▀█ █▄░█   █▀▀ █▄░█ █▀▀ █▀▄▀█ █▄█   █▄▀ █ █░░ █░░ █▀▀ █▀▄   █▄█ █▀█ █░█ ░\n\r█▀█ █░▀█   ██▄ █░▀█ ██▄ █░▀░█ ░█░   █░█ █ █▄▄ █▄▄ ██▄ █▄▀   ░█░ █▄█ █▄█ ▄\n\r")?;
             } else {
-                let _ = sc.queue(Print("An enemy killed you."));
+                sc.print("An enemy killed you.")?;
             }
         }
         DeathCause::Fuel => {
             if world.maxc > 69 {
-                let _ = sc.queue(Print("\r█▄█ █▀█ █░█   █▀█ ▄▀█ █▄░█   █▀█ █░█ ▀█▀   █▀█ █▀▀   █▀▀ █░█ █▀▀ █░░ ░\n\r░█░ █▄█ █▄█   █▀▄ █▀█ █░▀█   █▄█ █▄█ ░█░   █▄█ █▀░   █▀░ █▄█ ██▄ █▄▄ ▄\n\r"));
+                sc.print("\r█▄█ █▀█ █░█   █▀█ ▄▀█ █▄░█   █▀█ █░█ ▀█▀   █▀█ █▀▀   █▀▀ █░█ █▀▀ █░░ ░\n\r░█░ █▄█ █▄█   █▀▄ █▀█ █░▀█   █▄█ █▄█ ░█░   █▄█ █▀░   █▀░ █▄█ ██▄ █▄▄ ▄\n\r")?;
             } else {
-                let _ = sc.queue(Print("You ran out of fuel."));
+                sc.print("You ran out of fuel.")?;
             }
         }
         _ => {}
     }
 
-    let _ = sc.queue(MoveTo(2, world.maxl - 2));
+    sc.queue(MoveTo(2, world.maxl - 2))?;
     thread::sleep(time::Duration::from_millis(2000));
-    let _ = sc.queue(Print("Press any key to continue..."));
-    let _ = sc.flush();
+    sc.queue(Print("Press any key to continue..."))?;
+    sc.flush()?;
     loop {
         if poll(Duration::from_millis(0)).unwrap() {
-            let _ = read();
+            read()?;
             break;
         }
     }
-    let _ = sc.queue(Clear(crossterm::terminal::ClearType::All));
+
+    sc.queue(Clear(crossterm::terminal::ClearType::All))?;
+    Ok(())
 }
 
-pub fn welcome_screen(mut sc: &Stdout, world: &World) {
+pub fn welcome_screen(sc: &mut Stdout, world: &World) -> Result<(), std::io::Error> {
     let welcome_msg: &str = "██████╗ ██╗██╗   ██╗███████╗██████╗ ██████╗  █████╗ ██╗██████╗     ██████╗ ██╗   ██╗███████╗████████╗\n\r██╔══██╗██║██║   ██║██╔════╝██╔══██╗██╔══██╗██╔══██╗██║██╔══██╗    ██╔══██╗██║   ██║██╔════╝╚══██╔══╝\n\r██████╔╝██║██║   ██║█████╗  ██████╔╝██████╔╝███████║██║██║  ██║    ██████╔╝██║   ██║███████╗   ██║   \n\r██╔══██╗██║╚██╗ ██╔╝██╔══╝  ██╔══██╗██╔══██╗██╔══██║██║██║  ██║    ██╔══██╗██║   ██║╚════██║   ██║   \n\r██║  ██║██║ ╚████╔╝ ███████╗██║  ██║██║  ██║██║  ██║██║██████╔╝    ██║  ██║╚██████╔╝███████║   ██║   \n\r╚═╝  ╚═╝╚═╝  ╚═══╝  ╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝╚═════╝     ╚═╝  ╚═╝ ╚═════╝ ╚══════╝   ╚═╝   \n";
-    let _ = sc.queue(Clear(crossterm::terminal::ClearType::All));
-    if world.maxc > 100 {
-        let _ = sc.queue(MoveTo(0, 2));
-        let _ = sc.queue(Print(welcome_msg));
-    } else {
-        let _ = sc.queue(MoveTo(0, 2));
-        let _ = sc.queue(Print("RiverRaid Rust"));
-    }
-    let _ = sc.queue(MoveTo(2, world.maxl - 2));
+    sc.clear_all()?;
 
-    let _ = sc.queue(Print("Press any key to continue..."));
-    let _ = sc.flush();
+    if world.maxc > 100 {
+        sc.draw((0, 2), welcome_msg)?;
+    } else {
+        sc.draw((0, 2), "RiverRaid Rust")?;
+    }
+
+    sc.draw((2, world.maxl - 2), "Press any key to continue...")?;
+    sc.flush()?;
+
     loop {
         if poll(Duration::from_millis(0)).unwrap() {
-            let _ = read();
+            read()?;
             break;
         }
     }
-    let _ = sc.queue(Clear(crossterm::terminal::ClearType::All));
+    sc.clear_all()?;
+
+    Ok(())
 }
