@@ -1,4 +1,4 @@
-use rand:: thread_rng;
+use rand::thread_rng;
 use std::io::stdout;
 use std::{thread, time};
 
@@ -8,16 +8,15 @@ use crossterm::{
     ExecutableCommand, QueueableCommand,
 };
 
+mod events;
+mod greeting;
 mod physics;
 mod world;
-mod greeting;
-mod events;
 
-use world::world::{*};
-use physics::physics::{*};
-use greeting::greeting::{*};
-use events::events::{*};
-
+use events::*;
+use greeting::*;
+use physics::*;
+use world::*;
 
 /// Game Physic Rules
 /// TODO: Move to Physics.rs module later
@@ -48,7 +47,6 @@ fn physics(world: &mut World) {
     }
 }
 
-
 fn main() -> std::io::Result<()> {
     // init the screen
     let mut sc = stdout();
@@ -73,8 +71,6 @@ fn main() -> std::io::Result<()> {
         }
         thread::sleep(time::Duration::from_millis(slowness));
     }
-    
-    
 
     // game is finished
     sc.queue(Clear(crossterm::terminal::ClearType::All))?;
