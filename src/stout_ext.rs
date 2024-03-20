@@ -4,7 +4,7 @@ use std::{fmt::Display, io::Stdout};
 
 use crossterm::{cursor::MoveTo, style::Print, terminal::Clear, QueueableCommand};
 
-use crate::{Bullet, Enemy, Fuel, Location, Player};
+use crate::entities::{Bullet, Enemy, Fuel, Location, Player};
 
 pub type StdoutResult<'a> = Result<&'a mut Stdout, std::io::Error>;
 

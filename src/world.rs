@@ -1,201 +1,250 @@
 use std::{
     collections::VecDeque,
     io::{Stdout, Write},
+    thread,
+    time::Duration,
 };
 
-use crate::{drawable::Drawable, stout_ext::StdoutExt};
+use crossterm::event::{poll, read};
+use rand::thread_rng;
 
-#[derive(PartialEq, Eq)]
-pub enum PlayerStatus {
-    Dead,
-    Alive,
-    Quit,
-    Paused,
-}
-
-pub enum EnemyStatus {
-    Alive,
-    DeadBody,
-    Dead,
-}
-
-pub enum DeathCause {
-    None,
-    Enemy,
-    Ground,
-    Fuel,
-}
-
-#[derive(Clone)]
-pub struct Location {
-    pub c: u16,
-    pub l: u16,
-}
-
-impl Location {
-    pub fn new(c: u16, l: u16) -> Self {
-        Location { c, l }
-    }
-
-    // Checks if two locations are within a specified margin of each other
-    pub fn hit_with_margin(
-        &self,
-        other: &Location,
-        top: u16,
-        right: u16,
-        bottom: u16,
-        left: u16,
-    ) -> bool {
-        (other.l > self.l || self.l - other.l <= bottom)
-            && (self.l > other.l || other.l - self.l <= top)
-            && (other.c > self.c || self.c - other.c <= left)
-            && (self.c > other.c || other.c - self.c <= right)
-    }
-
-    // check if two locations is point to the same location
-    pub fn hit(&self, other: &Location) -> bool {
-        self.hit_with_margin(other, 0, 0, 0, 0)
-    }
-} // end of Location implementation.
-
-pub struct Enemy {
-    pub location: Location,
-    pub status: EnemyStatus,
-}
-
-impl Enemy {
-    pub fn new(column: u16, line: u16, status: EnemyStatus) -> Enemy {
-        Enemy {
-            location: Location::new(column, line),
-            status,
-        }
-    }
-} // end of Enemy implementation.
-
-pub struct Bullet {
-    pub location: Location,
-    pub energy: u16,
-}
-
-impl Bullet {
-    pub fn new(column: u16, line: u16, energy: u16) -> Bullet {
-        Bullet {
-            location: Location::new(column, line),
-            energy,
-        }
-    }
-} // end of Bullet implementation.
-
-pub struct Fuel {
-    pub location: Location,
-    pub status: EnemyStatus,
-}
-
-impl Fuel {
-    pub fn new(column: u16, line: u16, status: EnemyStatus) -> Fuel {
-        Fuel {
-            location: Location::new(column, line),
-            status,
-        }
-    }
-} // end of Fuel implementation.
-
-pub struct Player {
-    pub location: Location,
-    pub status: PlayerStatus,
-    pub gas: u16,
-    pub score: u16,
-    pub death_cause: DeathCause,
-}
+use crate::{
+    drawable::Drawable,
+    entities::{Bullet, DeathCause, Enemy, EntityStatus, Fuel, Location, Player, PlayerStatus},
+    handle_pressed_keys,
+    physics::{self},
+    stout_ext::StdoutExt,
+};
 
 pub struct World {
+    pub stdout: Stdout,
     pub player: Player,
     pub map: VecDeque<(u16, u16)>,
     pub maxc: u16,
     pub maxl: u16,
     pub next_right: u16,
     pub next_left: u16,
-    pub enemy: Vec<Enemy>,
-    pub fuel: Vec<Fuel>,
-    pub bullet: Vec<Bullet>,
+    pub enemies: Vec<Enemy>,
+    pub fuels: Vec<Fuel>,
+    pub bullets: Vec<Bullet>,
 }
 
 impl World {
-    pub fn new(maxc: u16, maxl: u16) -> World {
+    pub fn new(stdout: Stdout, maxc: u16, maxl: u16) -> World {
         World {
+            stdout,
             player: Player {
                 location: Location::new(maxc / 2, maxl - 1),
                 status: PlayerStatus::Alive,
                 score: 0,
                 gas: 1700,
-                death_cause: DeathCause::None,
             },
             map: VecDeque::from(vec![(maxc / 2 - 5, maxc / 2 + 5); maxl as usize]),
             maxc,
             maxl,
             next_left: maxc / 2 - 7,
             next_right: maxc / 2 + 7,
-            enemy: Vec::new(),
-            bullet: Vec::new(),
-            fuel: Vec::new(),
+            enemies: Vec::new(),
+            bullets: Vec::new(),
+            fuels: Vec::new(),
         }
     }
 
-    pub fn draw(&mut self, sc: &mut Stdout) -> std::io::Result<()> {
-        sc.clear_all()?;
+    pub fn clear_screen(&mut self) -> Result<&mut Stdout, std::io::Error> {
+        self.stdout.clear_all()
+    }
+
+    /// Game Physic Rules
+    fn physics(&mut self) {
+        let mut rng = thread_rng();
+
+        // check if player hit the ground
+        physics::check_player_status(self);
+
+        // check enemy hit something
+        physics::check_enemy_status(self);
+        physics::check_fuel_status(self);
+
+        // move the map Downward
+        physics::update_map(&mut rng, self);
+
+        // create new enemy
+        physics::create_enemy(&mut rng, self);
+        physics::create_fuel(&mut rng, self);
+
+        // Move elements along map movements
+        physics::move_enemies(self);
+        physics::move_fuel(self);
+        physics::move_bullets(self);
+
+        if self.player.gas >= 1 {
+            self.player.gas -= 1;
+        }
+    }
+
+    fn draw(&mut self) -> std::io::Result<()> {
+        self.clear_screen()?;
 
         // draw the map
         for l in 0..self.map.len() {
-            sc.draw((0, l as u16), "+".repeat(self.map[l].0 as usize))?
+            self.stdout
+                .draw((0, l as u16), "+".repeat(self.map[l].0 as usize))?
                 .draw(
                     (self.map[l].1, l as u16),
                     "+".repeat((self.maxc - self.map[l].1) as usize),
                 )?;
         }
 
-        sc.draw(2, format!(" Score: {} ", self.player.score))?
+        self.stdout
+            .draw(2, format!(" Score: {} ", self.player.score))?
             .draw((2, 3), format!(" Fuel: {} ", self.player.gas / 100))?;
 
         // draw fuel
-        self.fuel.retain_mut(|fuel| {
+        self.fuels.retain_mut(|fuel| {
             match fuel.status {
-                EnemyStatus::DeadBody => {
-                    fuel.status = EnemyStatus::Dead;
+                EntityStatus::DeadBody => {
+                    fuel.status = EntityStatus::Dead;
                 }
-                EnemyStatus::Dead => {
+                EntityStatus::Dead => {
                     return false;
                 }
                 _ => {}
             };
-            let _ = fuel.draw(sc);
+            let _ = fuel.draw(&mut self.stdout);
             true
         });
 
         // draw enemies
-        self.enemy.retain_mut(|enemy| {
+        self.enemies.retain_mut(|enemy| {
             match enemy.status {
-                EnemyStatus::DeadBody => {
-                    enemy.status = EnemyStatus::Dead;
+                EntityStatus::DeadBody => {
+                    enemy.status = EntityStatus::Dead;
                 }
-                EnemyStatus::Dead => {
+                EntityStatus::Dead => {
                     return false;
                 }
                 _ => {}
             };
-            let _ = enemy.draw(sc);
+            let _ = enemy.draw(&mut self.stdout);
             true
         });
 
         // draw bullet
-        for b in &self.bullet {
-            b.draw(sc)?;
+        for bullet in &self.bullets {
+            bullet.draw(&mut self.stdout)?;
         }
 
         // draw the player
-        self.player.draw(sc)?;
+        self.player.draw(&mut self.stdout)?;
 
         // Flush everything to the screen.
-        sc.flush()?;
+        self.stdout.flush()?;
+
+        Ok(())
+    }
+
+    fn pause_screen(&mut self) -> Result<(), std::io::Error> {
+        let pause_msg1: &str = "╔═══════════╗";
+        let pause_msg2: &str = "║Game Paused║";
+        let pause_msg3: &str = "╚═══════════╝";
+
+        self.stdout
+            .draw((self.maxc / 2 - 6, self.maxl / 2 - 1), pause_msg1)?
+            .draw((self.maxc / 2 - 6, self.maxl / 2), pause_msg2)?
+            .draw((self.maxc / 2 - 6, self.maxl / 2 + 1), pause_msg3)?
+            .flush()
+    }
+
+    pub fn welcome_screen(&mut self) -> Result<(), std::io::Error> {
+        let welcome_msg: &str = "██████╗ ██╗██╗   ██╗███████╗██████╗ ██████╗  █████╗ ██╗██████╗     ██████╗ ██╗   ██╗███████╗████████╗\n\r██╔══██╗██║██║   ██║██╔════╝██╔══██╗██╔══██╗██╔══██╗██║██╔══██╗    ██╔══██╗██║   ██║██╔════╝╚══██╔══╝\n\r██████╔╝██║██║   ██║█████╗  ██████╔╝██████╔╝███████║██║██║  ██║    ██████╔╝██║   ██║███████╗   ██║   \n\r██╔══██╗██║╚██╗ ██╔╝██╔══╝  ██╔══██╗██╔══██╗██╔══██║██║██║  ██║    ██╔══██╗██║   ██║╚════██║   ██║   \n\r██║  ██║██║ ╚████╔╝ ███████╗██║  ██║██║  ██║██║  ██║██║██████╔╝    ██║  ██║╚██████╔╝███████║   ██║   \n\r╚═╝  ╚═╝╚═╝  ╚═══╝  ╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝╚═════╝     ╚═╝  ╚═╝ ╚═════╝ ╚══════╝   ╚═╝   \n";
+        self.clear_screen()?;
+
+        if self.maxc > 100 {
+            self.stdout.draw((0, 2), welcome_msg)?;
+        } else {
+            self.stdout.draw((0, 2), "RiverRaid Rust")?;
+        }
+
+        self.stdout
+            .draw((2, self.maxl - 2), "Press any key to continue...")?;
+        self.stdout.flush()?;
+
+        loop {
+            if poll(Duration::from_millis(0)).unwrap() {
+                read()?;
+                break;
+            }
+        }
+        self.clear_screen()?;
+
+        Ok(())
+    }
+
+    pub fn goodbye_screen(&mut self) -> Result<(), std::io::Error> {
+        let goodbye_msg1: &str = " ██████╗  ██████╗  ██████╗ ██████╗      ██████╗  █████╗ ███╗   ███╗███████╗██╗\n\r██╔════╝ ██╔═══██╗██╔═══██╗██╔══██╗    ██╔════╝ ██╔══██╗████╗ ████║██╔════╝██║\n\r██║  ███╗██║   ██║██║   ██║██║  ██║    ██║  ███╗███████║██╔████╔██║█████╗  ██║\n\r██║   ██║██║   ██║██║   ██║██║  ██║    ██║   ██║██╔══██║██║╚██╔╝██║██╔══╝  ╚═╝\n\r╚██████╔╝╚██████╔╝╚██████╔╝██████╔╝    ╚██████╔╝██║  ██║██║ ╚═╝ ██║███████╗██╗\n\r ╚═════╝  ╚═════╝  ╚═════╝ ╚═════╝      ╚═════╝ ╚═╝  ╚═╝╚═╝     ╚═╝╚══════╝╚═╝\n";
+        let goodbye_msg2: &str = "████████╗██╗  ██╗ █████╗ ███╗   ██╗██╗  ██╗███████╗\n\r╚══██╔══╝██║  ██║██╔══██╗████╗  ██║██║ ██╔╝██╔════╝\n\r   ██║   ███████║███████║██╔██╗ ██║█████╔╝ ███████╗\n\r   ██║   ██╔══██║██╔══██║██║╚██╗██║██╔═██╗ ╚════██║\n\r   ██║   ██║  ██║██║  ██║██║ ╚████║██║  ██╗███████║██╗\n\r   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝╚══════╝╚═╝\n";
+
+        self.clear_screen()?
+            .draw((0, 2), goodbye_msg1)?
+            .draw((0, 10), goodbye_msg2)?;
+
+        self.stdout.move_cursor((2, self.maxl - 5))?;
+        if let PlayerStatus::Dead(cause) = &self.player.status {
+            match cause {
+                DeathCause::Ground => {
+                    if self.maxc > 91 {
+                        self.stdout.print("\r█▄█ █▀█ █░█   █▀▀ █▀█ ▄▀█ █▀ █░█ █▀▀ █▀▄   █ █▄░█   ▀█▀ █░█ █▀▀   █▀▀ █▀█ █▀█ █░█ █▄░█ █▀▄ ░\n\r░█░ █▄█ █▄█   █▄▄ █▀▄ █▀█ ▄█ █▀█ ██▄ █▄▀   █ █░▀█   ░█░ █▀█ ██▄   █▄█ █▀▄ █▄█ █▄█ █░▀█ █▄▀ ▄\n\r")?;
+                    } else {
+                        self.stdout.print("You crashed in the ground.")?;
+                    }
+                }
+                DeathCause::Enemy => {
+                    if self.maxc > 72 {
+                        self.stdout.print("\r▄▀█ █▄░█   █▀▀ █▄░█ █▀▀ █▀▄▀█ █▄█   █▄▀ █ █░░ █░░ █▀▀ █▀▄   █▄█ █▀█ █░█ ░\n\r█▀█ █░▀█   ██▄ █░▀█ ██▄ █░▀░█ ░█░   █░█ █ █▄▄ █▄▄ ██▄ █▄▀   ░█░ █▄█ █▄█ ▄\n\r")?;
+                    } else {
+                        self.stdout.print("An enemy killed you.")?;
+                    }
+                }
+                DeathCause::Fuel => {
+                    if self.maxc > 69 {
+                        self.stdout.print("\r█▄█ █▀█ █░█   █▀█ ▄▀█ █▄░█   █▀█ █░█ ▀█▀   █▀█ █▀▀   █▀▀ █░█ █▀▀ █░░ ░\n\r░█░ █▄█ █▄█   █▀▄ █▀█ █░▀█   █▄█ █▄█ ░█░   █▄█ █▀░   █▀░ █▄█ ██▄ █▄▄ ▄\n\r")?;
+                    } else {
+                        self.stdout.print("You ran out of fuel.")?;
+                    }
+                }
+            }
+        } else {
+            unreachable!("Undead player has no death cause!")
+        }
+
+        self.stdout.move_cursor((2, self.maxl - 2))?;
+        thread::sleep(Duration::from_millis(2000));
+        self.stdout.print("Press any key to continue...")?;
+        self.stdout.flush()?;
+        loop {
+            if poll(Duration::from_millis(0)).unwrap() {
+                read()?;
+                break;
+            }
+        }
+
+        self.clear_screen()?;
+        Ok(())
+    }
+
+    pub fn game_loop(&mut self, slowness: u64) -> Result<(), std::io::Error> {
+        while self.player.status == PlayerStatus::Alive
+            || self.player.status == PlayerStatus::Paused
+        {
+            handle_pressed_keys(self);
+            if self.player.status != PlayerStatus::Paused {
+                self.physics();
+                self.draw()?;
+            } else {
+                self.pause_screen()?;
+            }
+            thread::sleep(Duration::from_millis(slowness));
+        }
 
         Ok(())
     }

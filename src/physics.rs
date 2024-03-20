@@ -1,38 +1,38 @@
 use rand::{rngs::ThreadRng, Rng};
 use std::num::Wrapping;
 
-use crate::world::{DeathCause, Enemy, EnemyStatus, Fuel, PlayerStatus, World};
+use crate::{
+    entities::{DeathCause, Enemy, EntityStatus, Fuel, PlayerStatus},
+    world::World,
+};
 
 /// check if player hit the ground
 pub fn check_player_status(world: &mut World) {
     if world.player.location.c < world.map[world.player.location.l as usize].0
         || world.player.location.c >= world.map[world.player.location.l as usize].1
     {
-        world.player.status = PlayerStatus::Dead;
-        world.player.death_cause = DeathCause::Ground;
+        world.player.status = PlayerStatus::Dead(DeathCause::Ground);
     }
 
     if world.player.gas == 0 {
-        world.player.status = PlayerStatus::Dead;
-        world.player.death_cause = DeathCause::Fuel;
+        world.player.status = PlayerStatus::Dead(DeathCause::Fuel);
     }
 }
 
 /// check enemy hit something
 pub fn check_enemy_status(world: &mut World) {
-    for index in (0..world.enemy.len()).rev() {
-        if matches!(world.enemy[index].status, EnemyStatus::Alive)
-            && world.player.location.hit(&world.enemy[index].location)
+    for index in (0..world.enemies.len()).rev() {
+        if matches!(world.enemies[index].status, EntityStatus::Alive)
+            && world.player.location.hit(&world.enemies[index].location)
         {
-            world.player.status = PlayerStatus::Dead;
-            world.player.death_cause = DeathCause::Enemy;
+            world.player.status = PlayerStatus::Dead(DeathCause::Enemy);
         };
-        for j in (0..world.bullet.len()).rev() {
-            if world.bullet[j]
+        for j in (0..world.bullets.len()).rev() {
+            if world.bullets[j]
                 .location
-                .hit_with_margin(&world.enemy[index].location, 1, 0, 1, 0)
+                .hit_with_margin(&world.enemies[index].location, 1, 0, 1, 0)
             {
-                world.enemy[index].status = EnemyStatus::DeadBody;
+                world.enemies[index].status = EntityStatus::DeadBody;
                 world.player.score += 10;
             }
         }
@@ -78,28 +78,29 @@ pub fn update_map(rng: &mut ThreadRng, world: &mut World) {
 
 /// Move enemies on the river
 pub fn move_enemies(world: &mut World) {
-    for index in (0..world.enemy.len()).rev() {
-        world.enemy[index].location.l += 1;
-        if world.enemy[index].location.l >= world.maxl {
-            world.enemy.remove(index);
+    for index in (0..world.enemies.len()).rev() {
+        world.enemies[index].location.l += 1;
+        if world.enemies[index].location.l >= world.maxl {
+            world.enemies.remove(index);
         }
     }
 }
 
 /// Move Bullets
 pub fn move_bullets(world: &mut World) {
-    for index in (0..world.bullet.len()).rev() {
-        if world.bullet[index].energy == 0 || world.bullet[index].location.l <= 2 {
-            world.bullet.remove(index);
+    for index in (0..world.bullets.len()).rev() {
+        if world.bullets[index].energy == 0 || world.bullets[index].location.l <= 2 {
+            world.bullets.remove(index);
         } else {
-            world.bullet[index].location.l -= 2;
-            world.bullet[index].energy -= 1;
+            world.bullets[index].location.l -= 2;
+            world.bullets[index].energy -= 1;
 
-            if world.bullet[index].location.c < world.map[world.bullet[index].location.l as usize].0
-                || world.bullet[index].location.c
-                    >= world.map[world.bullet[index].location.l as usize].1
+            if world.bullets[index].location.c
+                < world.map[world.bullets[index].location.l as usize].0
+                || world.bullets[index].location.c
+                    >= world.map[world.bullets[index].location.l as usize].1
             {
-                world.bullet.remove(index);
+                world.bullets.remove(index);
             }
         }
     }
@@ -107,19 +108,19 @@ pub fn move_bullets(world: &mut World) {
 
 /// check if fuel is hit / moved over
 pub fn check_fuel_status(world: &mut World) {
-    for index in (0..world.fuel.len()).rev() {
-        if matches!(world.fuel[index].status, EnemyStatus::Alive)
-            && world.player.location.hit(&world.fuel[index].location)
+    for index in (0..world.fuels.len()).rev() {
+        if matches!(world.fuels[index].status, EntityStatus::Alive)
+            && world.player.location.hit(&world.fuels[index].location)
         {
-            world.fuel[index].status = EnemyStatus::DeadBody;
+            world.fuels[index].status = EntityStatus::DeadBody;
             world.player.gas += 200;
         };
-        for j in (0..world.bullet.len()).rev() {
-            if world.bullet[j]
+        for j in (0..world.bullets.len()).rev() {
+            if world.bullets[j]
                 .location
-                .hit_with_margin(&world.fuel[index].location, 1, 0, 1, 0)
+                .hit_with_margin(&world.fuels[index].location, 1, 0, 1, 0)
             {
-                world.fuel[index].status = EnemyStatus::DeadBody;
+                world.fuels[index].status = EntityStatus::DeadBody;
                 world.player.score += 20;
             }
         }
@@ -130,10 +131,10 @@ pub fn check_fuel_status(world: &mut World) {
 pub fn create_fuel(rng: &mut ThreadRng, world: &mut World) {
     // Possibility
     if rng.gen_range(0..100) >= 99 {
-        world.fuel.push(Fuel::new(
+        world.fuels.push(Fuel::new(
             rng.gen_range(world.map[0].0..world.map[0].1),
             0,
-            EnemyStatus::Alive,
+            EntityStatus::Alive,
         ));
     }
 }
@@ -142,20 +143,20 @@ pub fn create_fuel(rng: &mut ThreadRng, world: &mut World) {
 pub fn create_enemy(rng: &mut ThreadRng, world: &mut World) {
     // Possibility
     if rng.gen_range(0..10) >= 9 {
-        world.enemy.push(Enemy::new(
+        world.enemies.push(Enemy::new(
             rng.gen_range(world.map[0].0..world.map[0].1),
             0,
-            EnemyStatus::Alive,
+            EntityStatus::Alive,
         ));
     }
 }
 
 /// Move fuels on the river
 pub fn move_fuel(world: &mut World) {
-    for index in (0..world.fuel.len()).rev() {
-        world.fuel[index].location.l += 1;
-        if world.fuel[index].location.l >= world.maxl {
-            world.fuel.remove(index);
+    for index in (0..world.fuels.len()).rev() {
+        world.fuels[index].location.l += 1;
+        if world.fuels[index].location.l >= world.maxl {
+            world.fuels.remove(index);
         }
     }
 }

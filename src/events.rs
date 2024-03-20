@@ -1,13 +1,10 @@
 use crossterm::event::{poll, read, Event, KeyCode};
 
-use std::{
-    io::{Stdout, Write},
-    time::Duration,
-};
+use std::time::Duration;
 
 use crate::{
-    stout_ext::StdoutExt,
-    world::{Bullet, PlayerStatus, World},
+    entities::{Bullet, PlayerStatus},
+    world::World,
 };
 
 pub fn handle_pressed_keys(world: &mut World) {
@@ -83,13 +80,13 @@ pub fn handle_pressed_keys(world: &mut World) {
                         }
                     }
                     KeyCode::Char(' ') => {
-                        if world.player.status == PlayerStatus::Alive && world.bullet.is_empty() {
+                        if world.player.status == PlayerStatus::Alive && world.bullets.is_empty() {
                             let new_bullet = Bullet::new(
                                 world.player.location.c,
                                 world.player.location.l - 1,
                                 world.maxl / 4,
                             );
-                            world.bullet.push(new_bullet);
+                            world.bullets.push(new_bullet);
                         }
                     }
                     _ => {}
@@ -98,15 +95,4 @@ pub fn handle_pressed_keys(world: &mut World) {
             _ => {}
         }
     }
-}
-
-pub fn pause_screen(sc: &mut Stdout, world: &World) -> Result<(), std::io::Error> {
-    let pause_msg1: &str = "╔═══════════╗";
-    let pause_msg2: &str = "║Game Paused║";
-    let pause_msg3: &str = "╚═══════════╝";
-
-    sc.draw((world.maxc / 2 - 6, world.maxl / 2 - 1), pause_msg1)?
-        .draw((world.maxc / 2 - 6, world.maxl / 2), pause_msg2)?
-        .draw((world.maxc / 2 - 6, world.maxl / 2 + 1), pause_msg3)?
-        .flush()
 }

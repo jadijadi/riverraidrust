@@ -1,6 +1,9 @@
 use std::io::Stdout;
 
-use crate::{stout_ext::StdoutExt, Bullet, Enemy, EnemyStatus, Fuel, Player};
+use crate::{
+    entities::{Bullet, Enemy, EntityStatus, Fuel, Player},
+    stout_ext::StdoutExt,
+};
 
 pub trait Drawable {
     fn draw(&self, sc: &mut Stdout) -> Result<(), std::io::Error>;
@@ -9,13 +12,13 @@ pub trait Drawable {
 impl Drawable for Enemy {
     fn draw(&self, sc: &mut Stdout) -> Result<(), std::io::Error> {
         match self.status {
-            EnemyStatus::Alive => {
+            EntityStatus::Alive => {
                 sc.draw(self, "E")?;
             }
-            EnemyStatus::DeadBody => {
+            EntityStatus::DeadBody => {
                 sc.draw(self, "X")?;
             }
-            EnemyStatus::Dead => {}
+            EntityStatus::Dead => {}
         };
 
         Ok(())
@@ -25,13 +28,13 @@ impl Drawable for Enemy {
 impl Drawable for Fuel {
     fn draw(&self, sc: &mut Stdout) -> Result<(), std::io::Error> {
         match self.status {
-            EnemyStatus::Alive => {
+            EntityStatus::Alive => {
                 sc.draw(self, "F")?;
             }
-            EnemyStatus::DeadBody => {
+            EntityStatus::DeadBody => {
                 sc.draw(self, "$")?;
             }
-            EnemyStatus::Dead => {}
+            EntityStatus::Dead => {}
         };
 
         Ok(())
