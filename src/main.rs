@@ -1,3 +1,4 @@
+use crossterm::terminal::{EnterAlternateScreen,LeaveAlternateScreen};
 use rand:: thread_rng;
 use std::io::stdout;
 use std::{thread, time};
@@ -52,17 +53,15 @@ fn physics(world: &mut World) {
 fn main() -> std::io::Result<()> {
     // init the screen
     let mut sc = stdout();
+    sc.execute(EnterAlternateScreen)?;
     let (maxc, maxl) = size().unwrap();
     sc.execute(Hide)?;
     enable_raw_mode()?;
-
     // init the world
     let slowness = 100;
     let mut world = World::new(maxc, maxl);
-
     // show welcoming banner
     welcome_screen(&sc, &world);
-
     while world.status == PlayerStatus::Alive || world.status == PlayerStatus::Paused {
         handle_pressed_keys(&mut world);
         if world.status != PlayerStatus::Paused {
@@ -75,12 +74,12 @@ fn main() -> std::io::Result<()> {
     }
     
     
-
     // game is finished
     sc.queue(Clear(crossterm::terminal::ClearType::All))?;
     goodbye_screen(&sc, &world);
     sc.queue(Clear(crossterm::terminal::ClearType::All))?
-        .execute(Show)?;
-    disable_raw_mode()?;
-    Ok(())
+    .execute(Show)?;
+sc.execute(LeaveAlternateScreen)?;
+disable_raw_mode()?;
+Ok(())
 }
