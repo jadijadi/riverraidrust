@@ -1,55 +1,19 @@
 use std::{
-    collections::VecDeque,
     io::{Stdout, Write},
     thread,
     time::Duration,
 };
 
 use crossterm::event::{poll, read};
-use rand::{rngs::ThreadRng, thread_rng};
 
 use crate::{
     drawable::Drawable,
-    entities::{Bullet, DeathCause, Enemy, Fuel, Location, Player, PlayerStatus},
-    handle_pressed_keys,
-    physics::{self},
+    entities::{DeathCause, PlayerStatus},
     stout_ext::StdoutExt,
+    World,
 };
 
-pub struct World {
-    pub player: Player,
-    pub map: VecDeque<(u16, u16)>,
-    pub maxc: u16,
-    pub maxl: u16,
-    pub next_right: u16,
-    pub next_left: u16,
-    pub enemies: Vec<Enemy>,
-    pub fuels: Vec<Fuel>,
-    pub bullets: Vec<Bullet>,
-    pub rng: ThreadRng, // Local rng for the whole world
-}
-
 impl World {
-    pub fn new(maxc: u16, maxl: u16) -> World {
-        World {
-            player: Player {
-                location: Location::new(maxc / 2, maxl - 1),
-                status: PlayerStatus::Alive,
-                score: 0,
-                gas: 1700,
-            },
-            map: VecDeque::from(vec![(maxc / 2 - 5, maxc / 2 + 5); maxl as usize]),
-            maxc,
-            maxl,
-            next_left: maxc / 2 - 7,
-            next_right: maxc / 2 + 7,
-            enemies: Vec::new(),
-            bullets: Vec::new(),
-            fuels: Vec::new(),
-            rng: thread_rng(),
-        }
-    }
-
     pub fn clear_screen<'a>(
         &'a self,
         stdout: &'a mut Stdout,
@@ -57,33 +21,7 @@ impl World {
         stdout.clear_all()
     }
 
-    /// Game Physic Rules
-    fn physics(&mut self) {
-        // check if player hit the ground
-        physics::check_player_status(self);
-
-        // check enemy hit something
-        physics::check_enemy_status(self);
-        physics::check_fuel_status(self);
-
-        // move the map Downward
-        physics::update_map(self);
-
-        // create new enemy
-        physics::create_enemy(self);
-        physics::create_fuel(self);
-
-        // Move elements along map movements
-        physics::move_enemies(self);
-        physics::move_fuel(self);
-        physics::move_bullets(self);
-
-        if self.player.gas >= 1 {
-            self.player.gas -= 1;
-        }
-    }
-
-    fn draw(
+    pub(super) fn draw(
         &self, // draw function should not change world's state
         stdout: &mut Stdout,
     ) -> std::io::Result<()> {
@@ -128,7 +66,7 @@ impl World {
         Ok(())
     }
 
-    fn pause_screen(&self, stdout: &mut Stdout) -> Result<(), std::io::Error> {
+    pub(super) fn pause_screen(&self, stdout: &mut Stdout) -> Result<(), std::io::Error> {
         let pause_msg1: &str = "╔═══════════╗";
         let pause_msg2: &str = "║Game Paused║";
         let pause_msg3: &str = "╚═══════════╝";
@@ -215,21 +153,4 @@ impl World {
         self.clear_screen(stdout)?;
         Ok(())
     }
-
-    pub fn game_loop(&mut self, stdout: &mut Stdout, slowness: u64) -> Result<(), std::io::Error> {
-        while self.player.status == PlayerStatus::Alive
-            || self.player.status == PlayerStatus::Paused
-        {
-            handle_pressed_keys(self);
-            if self.player.status != PlayerStatus::Paused {
-                self.physics();
-                self.draw(stdout)?;
-            } else {
-                self.pause_screen(stdout)?;
-            }
-            thread::sleep(Duration::from_millis(slowness));
-        }
-
-        Ok(())
-    }
-} // end of World implementation.
+}

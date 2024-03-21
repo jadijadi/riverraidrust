@@ -10,7 +10,6 @@ use crossterm::{
 mod drawable;
 mod entities;
 mod events;
-mod physics;
 mod stout_ext;
 mod world;
 
