@@ -97,7 +97,8 @@ impl World {
 
         self.stdout
             .draw(2, format!(" Score: {} ", self.player.score))?
-            .draw((2, 3), format!(" Fuel: {} ", self.player.gas / 100))?;
+            .draw((2, 3), format!(" Fuel: {} ", self.player.gas / 100))?
+            .draw((2, 4), format!(" Enemies: {} ", self.enemies.len()))?;
 
         // draw fuel
         for fuel in self.fuels.iter() {

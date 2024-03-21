@@ -58,6 +58,7 @@ pub fn update_map(rng: &mut ThreadRng, world: &mut World) {
         Less => left -= 1,
         Equal => {}
     };
+
     match world.next_right.cmp(&right) {
         Greater => right += 1,
         Less => right -= 1,
@@ -70,6 +71,7 @@ pub fn update_map(rng: &mut ThreadRng, world: &mut World) {
             world.next_left = 1;
         }
     }
+
     if world.next_right == world.map[0].1 && rng.gen_range(0..10) >= 7 {
         world.next_right = rng.gen_range(world.next_right - 5..world.next_right + 5);
         if world.next_right > world.maxc {
@@ -85,12 +87,11 @@ pub fn update_map(rng: &mut ThreadRng, world: &mut World) {
 
 /// Move enemies on the river
 pub fn move_enemies(world: &mut World) {
-    for index in (0..world.enemies.len()).rev() {
-        world.enemies[index].location.l += 1;
-        if world.enemies[index].location.l >= world.maxl {
-            world.enemies.remove(index);
-        }
-    }
+    world.enemies.retain_mut(|enemy| {
+        enemy.location.l += 1;
+        // Retain enemies within the screen
+        enemy.location.l < world.maxl
+    });
 }
 
 /// Move Bullets
@@ -167,10 +168,9 @@ pub fn create_enemy(rng: &mut ThreadRng, world: &mut World) {
 
 /// Move fuels on the river
 pub fn move_fuel(world: &mut World) {
-    for index in (0..world.fuels.len()).rev() {
-        world.fuels[index].location.l += 1;
-        if world.fuels[index].location.l >= world.maxl {
-            world.fuels.remove(index);
-        }
-    }
+    world.fuels.retain_mut(|fuel| {
+        fuel.location.l += 1;
+        // Retain fuels within the screen
+        fuel.location.l < world.maxl
+    });
 }
