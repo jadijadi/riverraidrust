@@ -4,7 +4,7 @@ use std::{thread, time};
 
 use crossterm::{
     cursor::{Hide, Show},
-    terminal::{disable_raw_mode, enable_raw_mode, size, Clear},
+    terminal::{EnterAlternateScreen,LeaveAlternateScreen,disable_raw_mode, enable_raw_mode, size, Clear},
     ExecutableCommand, QueueableCommand,
 };
 
@@ -52,6 +52,7 @@ fn physics(world: &mut World) {
 fn main() -> std::io::Result<()> {
     // init the screen
     let mut sc = stdout();
+    sc.execute(EnterAlternateScreen)?;
     let (maxc, maxl) = size().unwrap();
     sc.execute(Hide)?;
     enable_raw_mode()?;
@@ -62,7 +63,7 @@ fn main() -> std::io::Result<()> {
 
     // show welcoming banner
     welcome_screen(&sc, &world);
-
+    
     while world.status == PlayerStatus::Alive || world.status == PlayerStatus::Paused {
         handle_pressed_keys(&mut world);
         if world.status != PlayerStatus::Paused {
@@ -75,12 +76,12 @@ fn main() -> std::io::Result<()> {
     }
     
     
-
     // game is finished
     sc.queue(Clear(crossterm::terminal::ClearType::All))?;
     goodbye_screen(&sc, &world);
     sc.queue(Clear(crossterm::terminal::ClearType::All))?
-        .execute(Show)?;
-    disable_raw_mode()?;
-    Ok(())
+    .execute(Show)?;
+sc.execute(LeaveAlternateScreen)?;
+disable_raw_mode()?;
+Ok(())
 }
