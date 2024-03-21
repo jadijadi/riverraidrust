@@ -3,10 +3,7 @@ pub mod events {
     use crate::world::world::{World, PlayerStatus, Bullet};
 
     use crossterm::{
-        event::{poll, read, Event, KeyCode},
-        cursor::MoveTo,
-        style::Print,
-        QueueableCommand
+        cursor::MoveTo, event::{self, poll, read, Event, KeyCode, KeyEvent, KeyModifiers}, style::Print, QueueableCommand
     };
 
     use std::{
@@ -23,6 +20,30 @@ pub mod events {
             }
     
             match key {
+                Event::Key(KeyEvent{
+                    modifiers:KeyModifiers::CONTROL,
+                    code:KeyCode::Left,
+                    ..})=>{if world.status == PlayerStatus::Alive && world.player_location.c > 1 {
+                        world.player_location.c -= 4
+                    }}
+                Event::Key(KeyEvent{
+                    modifiers:KeyModifiers::CONTROL,
+                    code:KeyCode::Right,
+                    ..})=>{if world.status == PlayerStatus::Alive && world.player_location.c > 1 {
+                        world.player_location.c += 4
+                    }}
+                Event::Key(KeyEvent{
+                    modifiers:KeyModifiers::CONTROL,
+                    code:KeyCode::Up,
+                    ..})=>{if world.status == PlayerStatus::Alive && world.player_location.l > 1 {
+                        world.player_location.l -= 4
+                    }}
+                Event::Key(KeyEvent{
+                    modifiers:KeyModifiers::CONTROL,
+                    code:KeyCode::Down,
+                    ..})=>{if world.status == PlayerStatus::Alive && world.player_location.l > 1 {
+                        world.player_location.l += 4
+                    }}
                 Event::Key(event) => {
                     // I'm reading from keyboard into event
                     match event.code {
