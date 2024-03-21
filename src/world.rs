@@ -101,6 +101,7 @@ impl World {
 
         // draw fuel
         self.fuels.retain_mut(|fuel| {
+            let _ = fuel.draw(&mut self.stdout);
             match fuel.status {
                 EntityStatus::DeadBody => {
                     fuel.status = EntityStatus::Dead;
@@ -110,12 +111,12 @@ impl World {
                 }
                 _ => {}
             };
-            let _ = fuel.draw(&mut self.stdout);
             true
         });
 
         // draw enemies
         self.enemies.retain_mut(|enemy| {
+            let _ = enemy.draw(&mut self.stdout);
             match enemy.status {
                 EntityStatus::DeadBody => {
                     enemy.status = EntityStatus::Dead;
@@ -125,7 +126,6 @@ impl World {
                 }
                 _ => {}
             };
-            let _ = enemy.draw(&mut self.stdout);
             true
         });
 
