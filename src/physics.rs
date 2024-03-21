@@ -21,18 +21,25 @@ pub fn check_player_status(world: &mut World) {
 
 /// check enemy hit something
 pub fn check_enemy_status(world: &mut World) {
-    for index in (0..world.enemies.len()).rev() {
-        if matches!(world.enemies[index].status, EntityStatus::Alive)
-            && world.player.location.hit(&world.enemies[index].location)
-        {
-            world.player.status = PlayerStatus::Dead(DeathCause::Enemy);
-        };
-        for j in (0..world.bullets.len()).rev() {
-            if world.bullets[j]
-                .location
-                .hit_with_margin(&world.enemies[index].location, 1, 0, 1, 0)
-            {
-                world.enemies[index].status = EntityStatus::DeadBody;
+    // Remove dead
+    world
+        .enemies
+        .retain(|f| !matches!(f.status, EntityStatus::Dead));
+
+    for enemy in world.enemies.iter_mut().rev() {
+        match enemy.status {
+            EntityStatus::Alive if world.player.location.hit(&enemy.location) => {
+                world.player.status = PlayerStatus::Dead(DeathCause::Enemy);
+            }
+            EntityStatus::DeadBody => {
+                enemy.status = EntityStatus::Dead;
+            }
+            _ => {}
+        }
+
+        for bullet in world.bullets.iter().rev() {
+            if bullet.location.hit_with_margin(&enemy.location, 1, 0, 1, 0) {
+                enemy.status = EntityStatus::DeadBody;
                 world.player.score += 10;
             }
         }
@@ -108,19 +115,26 @@ pub fn move_bullets(world: &mut World) {
 
 /// check if fuel is hit / moved over
 pub fn check_fuel_status(world: &mut World) {
-    for index in (0..world.fuels.len()).rev() {
-        if matches!(world.fuels[index].status, EntityStatus::Alive)
-            && world.player.location.hit(&world.fuels[index].location)
-        {
-            world.fuels[index].status = EntityStatus::DeadBody;
-            world.player.gas += 200;
-        };
-        for j in (0..world.bullets.len()).rev() {
-            if world.bullets[j]
-                .location
-                .hit_with_margin(&world.fuels[index].location, 1, 0, 1, 0)
-            {
-                world.fuels[index].status = EntityStatus::DeadBody;
+    // Remove dead
+    world
+        .fuels
+        .retain(|f| !matches!(f.status, EntityStatus::Dead));
+
+    for fuel in world.fuels.iter_mut().rev() {
+        match fuel.status {
+            EntityStatus::Alive if world.player.location.hit(&fuel.location) => {
+                fuel.status = EntityStatus::DeadBody;
+                world.player.gas += 200;
+            }
+            EntityStatus::DeadBody => {
+                fuel.status = EntityStatus::Dead;
+            }
+            _ => {}
+        }
+
+        for bullet in world.bullets.iter().rev() {
+            if bullet.location.hit_with_margin(&fuel.location, 1, 0, 1, 0) {
+                fuel.status = EntityStatus::DeadBody;
                 world.player.score += 20;
             }
         }

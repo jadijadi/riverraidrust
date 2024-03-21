@@ -10,7 +10,7 @@ use rand::thread_rng;
 
 use crate::{
     drawable::Drawable,
-    entities::{Bullet, DeathCause, Enemy, EntityStatus, Fuel, Location, Player, PlayerStatus},
+    entities::{Bullet, DeathCause, Enemy, Fuel, Location, Player, PlayerStatus},
     handle_pressed_keys,
     physics::{self},
     stout_ext::StdoutExt,
@@ -100,34 +100,14 @@ impl World {
             .draw((2, 3), format!(" Fuel: {} ", self.player.gas / 100))?;
 
         // draw fuel
-        self.fuels.retain_mut(|fuel| {
-            let _ = fuel.draw(&mut self.stdout);
-            match fuel.status {
-                EntityStatus::DeadBody => {
-                    fuel.status = EntityStatus::Dead;
-                }
-                EntityStatus::Dead => {
-                    return false;
-                }
-                _ => {}
-            };
-            true
-        });
+        for fuel in self.fuels.iter() {
+            fuel.draw(&mut self.stdout)?;
+        }
 
         // draw enemies
-        self.enemies.retain_mut(|enemy| {
-            let _ = enemy.draw(&mut self.stdout);
-            match enemy.status {
-                EntityStatus::DeadBody => {
-                    enemy.status = EntityStatus::Dead;
-                }
-                EntityStatus::Dead => {
-                    return false;
-                }
-                _ => {}
-            };
-            true
-        });
+        for enemy in self.enemies.iter() {
+            enemy.draw(&mut self.stdout)?;
+        }
 
         // draw bullet
         for bullet in &self.bullets {
