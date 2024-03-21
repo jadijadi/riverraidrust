@@ -1,4 +1,4 @@
-use rand::{rngs::ThreadRng, Rng};
+use rand::Rng;
 use std::num::Wrapping;
 
 use crate::{
@@ -47,7 +47,7 @@ pub fn check_enemy_status(world: &mut World) {
 }
 
 /// Update the map
-pub fn update_map(rng: &mut ThreadRng, world: &mut World) {
+pub fn update_map(world: &mut World) {
     use std::cmp::Ordering::*;
 
     // move the map downward using VecDeque
@@ -65,15 +65,19 @@ pub fn update_map(rng: &mut ThreadRng, world: &mut World) {
         Equal => {}
     };
 
-    if world.next_left == world.map[0].0 && rng.gen_range(0..10) >= 7 {
-        world.next_left = rng.gen_range(world.next_left.saturating_sub(5)..world.next_left + 5);
+    if world.next_left == world.map[0].0 && world.rng.gen_range(0..10) >= 7 {
+        world.next_left = world
+            .rng
+            .gen_range(world.next_left.saturating_sub(5)..world.next_left + 5);
         if world.next_left == 0 {
             world.next_left = 1;
         }
     }
 
-    if world.next_right == world.map[0].1 && rng.gen_range(0..10) >= 7 {
-        world.next_right = rng.gen_range(world.next_right - 5..world.next_right + 5);
+    if world.next_right == world.map[0].1 && world.rng.gen_range(0..10) >= 7 {
+        world.next_right = world
+            .rng
+            .gen_range(world.next_right - 5..world.next_right + 5);
         if world.next_right > world.maxc {
             world.next_right = Wrapping(world.maxc).0 - 1;
         }
@@ -143,11 +147,11 @@ pub fn check_fuel_status(world: &mut World) {
 }
 
 /// Create a new fuel; maybe
-pub fn create_fuel(rng: &mut ThreadRng, world: &mut World) {
+pub fn create_fuel(world: &mut World) {
     // Possibility
-    if rng.gen_range(0..100) >= 99 {
+    if world.rng.gen_range(0..100) >= 99 {
         world.fuels.push(Fuel::new(
-            rng.gen_range(world.map[0].0..world.map[0].1),
+            world.rng.gen_range(world.map[0].0..world.map[0].1),
             0,
             EntityStatus::Alive,
         ));
@@ -155,11 +159,11 @@ pub fn create_fuel(rng: &mut ThreadRng, world: &mut World) {
 }
 
 /// Create a new enemy
-pub fn create_enemy(rng: &mut ThreadRng, world: &mut World) {
+pub fn create_enemy(world: &mut World) {
     // Possibility
-    if rng.gen_range(0..10) >= 9 {
+    if world.rng.gen_range(0..10) >= 9 {
         world.enemies.push(Enemy::new(
-            rng.gen_range(world.map[0].0..world.map[0].1),
+            world.rng.gen_range(world.map[0].0..world.map[0].1),
             0,
             EntityStatus::Alive,
         ));

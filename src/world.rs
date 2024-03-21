@@ -6,7 +6,7 @@ use std::{
 };
 
 use crossterm::event::{poll, read};
-use rand::thread_rng;
+use rand::{rngs::ThreadRng, thread_rng};
 
 use crate::{
     drawable::Drawable,
@@ -26,6 +26,7 @@ pub struct World {
     pub enemies: Vec<Enemy>,
     pub fuels: Vec<Fuel>,
     pub bullets: Vec<Bullet>,
+    pub rng: ThreadRng, // Local rng for the whole world
 }
 
 impl World {
@@ -45,6 +46,7 @@ impl World {
             enemies: Vec::new(),
             bullets: Vec::new(),
             fuels: Vec::new(),
+            rng: thread_rng(),
         }
     }
 
@@ -57,8 +59,6 @@ impl World {
 
     /// Game Physic Rules
     fn physics(&mut self) {
-        let mut rng = thread_rng();
-
         // check if player hit the ground
         physics::check_player_status(self);
 
@@ -67,11 +67,11 @@ impl World {
         physics::check_fuel_status(self);
 
         // move the map Downward
-        physics::update_map(&mut rng, self);
+        physics::update_map(self);
 
         // create new enemy
-        physics::create_enemy(&mut rng, self);
-        physics::create_fuel(&mut rng, self);
+        physics::create_enemy(self);
+        physics::create_fuel(self);
 
         // Move elements along map movements
         physics::move_enemies(self);
