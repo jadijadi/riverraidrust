@@ -108,6 +108,11 @@ pub mod world {
         }
     } // end of Fuel implementation.
 
+    #[derive(PartialEq, Eq)]
+    pub enum GameMode {
+        Normal,
+        God,
+    }
 
     pub struct World {
         pub player_location: Location,
@@ -124,6 +129,7 @@ pub mod world {
         pub gas: u16,
         pub score: u16,
         pub death_cause: DeathCause,
+        pub game_mode: GameMode,
     }
 
     impl World {
@@ -143,8 +149,10 @@ pub mod world {
                 score: 0,
                 gas: 1700,
                 death_cause: DeathCause::None,
+                game_mode: GameMode::Normal,
             }
         }
+
 
         pub fn draw(&mut self, mut sc: &Stdout) -> std::io::Result<()> {
             sc.queue(Clear(crossterm::terminal::ClearType::All))?;
@@ -161,6 +169,10 @@ pub mod world {
                 .queue(Print(format!(" Score: {} ", self.score)))?
                 .queue(MoveTo(2, 3))?
                 .queue(Print(format!(" Fuel: {} ", self.gas / 100)))?;
+
+            if self.game_mode == GameMode::God {
+                draw_god_mode(sc);
+            }
         
             // draw fuel
             for index in (0..self.fuel.len()).rev() {
@@ -228,4 +240,11 @@ pub mod world {
 
 
     } // end of World implementation.
+
+    pub fn draw_god_mode(mut sc: &Stdout) {
+        let msg: &str = " GOD MODE: ON ";
+        let _ = sc.queue(MoveTo(2, 4));
+        let _ = sc.queue(Print(msg));
+    }
+
 }

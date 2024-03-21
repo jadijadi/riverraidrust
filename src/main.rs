@@ -67,6 +67,14 @@ fn main() -> std::io::Result<()> {
         handle_pressed_keys(&mut world);
         if world.status != PlayerStatus::Paused {
             physics(&mut world);
+            match world.game_mode {
+                GameMode::God => {
+                    if world.status != PlayerStatus::Quit {
+                        world.status = PlayerStatus::Alive;
+                    }
+                }
+                GameMode::Normal => {}
+            }
             world.draw(&sc)?;
         } else {
             pause_screen(&sc, &world);

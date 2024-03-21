@@ -1,6 +1,6 @@
 pub mod events {
 
-    use crate::world::world::{World, PlayerStatus, Bullet};
+    use crate::world::world::{World, PlayerStatus, Bullet, GameMode};
 
     use crossterm::{
         event::{poll, read, Event, KeyCode},
@@ -27,6 +27,13 @@ pub mod events {
                     // I'm reading from keyboard into event
                     match event.code {
                         KeyCode::Char('q') => world.status = PlayerStatus::Quit,
+                        KeyCode::Char('g') => {
+                            if world.game_mode == GameMode::Normal {
+                                world.game_mode = GameMode::God;
+                            } else if world.game_mode == GameMode::God {
+                                world.game_mode = GameMode::Normal;
+                            }
+                        }
                         KeyCode::Char('w') => {
                             if world.status == PlayerStatus::Alive && world.player_location.l > 1 {
                                 world.player_location.l -= 1
