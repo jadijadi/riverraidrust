@@ -26,22 +26,21 @@ fn main() -> std::io::Result<()> {
 
     // init the world
     let slowness = 100;
-    let mut world = World::new(sc, maxc, maxl);
+    let mut world = World::new(maxc, maxl);
 
     // show welcoming banner
-    world.welcome_screen()?;
+    world.welcome_screen(&mut sc)?;
 
     // Main game loop
     // - Events
     // - Physics
     // - Drawing
-    world.game_loop(slowness)?;
+    world.game_loop(&mut sc, slowness)?;
 
     // game is finished
-    world.clear_screen()?;
-    world.goodbye_screen()?;
+    world.clear_screen(&mut sc)?;
+    world.goodbye_screen(&mut sc)?;
 
-    let mut sc = world.stdout;
     sc.clear_all()?.execute(Show)?;
     disable_raw_mode()?;
     Ok(())
