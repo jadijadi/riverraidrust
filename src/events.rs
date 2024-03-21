@@ -27,48 +27,25 @@ pub mod events {
                     // I'm reading from keyboard into event
                     match event.code {
                         KeyCode::Char('q') => world.status = PlayerStatus::Quit,
-                        KeyCode::Char('w') => {
+                
+                        KeyCode::Up | KeyCode::Char('w') => {
                             if world.status == PlayerStatus::Alive && world.player_location.l > 1 {
                                 world.player_location.l -= 1
                             }
                         }
-                        KeyCode::Char('s') => {
+                        KeyCode::Down | KeyCode::Char('s') => {
                             if world.status == PlayerStatus::Alive
                                 && world.player_location.l < world.maxl - 1
                             {
                                 world.player_location.l += 1
                             }
                         }
-                        KeyCode::Char('a') => {
+                        KeyCode::Left | KeyCode::Char('a') => {
                             if world.status == PlayerStatus::Alive && world.player_location.c > 1 {
                                 world.player_location.c -= 1
                             }
                         }
-                        KeyCode::Char('d') => {
-                            if world.status == PlayerStatus::Alive
-                                && world.player_location.c < world.maxc - 1
-                            {
-                                world.player_location.c += 1
-                            }
-                        }
-                        KeyCode::Up => {
-                            if world.status == PlayerStatus::Alive && world.player_location.l > 1 {
-                                world.player_location.l -= 1
-                            }
-                        }
-                        KeyCode::Down => {
-                            if world.status == PlayerStatus::Alive
-                                && world.player_location.l < world.maxl - 1
-                            {
-                                world.player_location.l += 1
-                            }
-                        }
-                        KeyCode::Left => {
-                            if world.status == PlayerStatus::Alive && world.player_location.c > 1 {
-                                world.player_location.c -= 1
-                            }
-                        }
-                        KeyCode::Right => {
+                        KeyCode::Right | KeyCode::Char('d') => {
                             if world.status == PlayerStatus::Alive
                                 && world.player_location.c < world.maxc - 1
                             {
