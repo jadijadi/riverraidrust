@@ -1,11 +1,10 @@
-use crossterm::terminal::{EnterAlternateScreen,LeaveAlternateScreen};
 use rand:: thread_rng;
 use std::io::stdout;
 use std::{thread, time};
 
 use crossterm::{
     cursor::{Hide, Show},
-    terminal::{disable_raw_mode, enable_raw_mode, size, Clear},
+    terminal::{EnterAlternateScreen,LeaveAlternateScreen,disable_raw_mode, enable_raw_mode, size, Clear},
     ExecutableCommand, QueueableCommand,
 };
 
@@ -57,11 +56,14 @@ fn main() -> std::io::Result<()> {
     let (maxc, maxl) = size().unwrap();
     sc.execute(Hide)?;
     enable_raw_mode()?;
+
     // init the world
     let slowness = 100;
     let mut world = World::new(maxc, maxl);
+
     // show welcoming banner
     welcome_screen(&sc, &world);
+    
     while world.status == PlayerStatus::Alive || world.status == PlayerStatus::Paused {
         handle_pressed_keys(&mut world);
         if world.status != PlayerStatus::Paused {
