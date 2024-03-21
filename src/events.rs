@@ -10,7 +10,6 @@ pub mod events {
         io::{Stdout, Write},
         time::Duration,
     };
-
     pub fn handle_pressed_keys(world: &mut World) {
         if poll(Duration::from_millis(10)).unwrap() {
             let key = read().unwrap();
@@ -41,7 +40,7 @@ pub mod events {
                 Event::Key(KeyEvent{
                     modifiers:KeyModifiers::CONTROL,
                     code:KeyCode::Down,
-                    ..})=>{if world.status == PlayerStatus::Alive && world.player_location.l > 1 {
+                    ..})=>{if world.status == PlayerStatus::Alive && world.player_location.l <world.maxl-4  {
                         world.player_location.l += 4
                     }}
                 Event::Key(event) => {
