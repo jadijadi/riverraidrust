@@ -7,6 +7,7 @@ use crossterm::{
     ExecutableCommand,
 };
 
+mod canvas;
 mod drawable;
 mod entities;
 mod events;
@@ -24,7 +25,7 @@ fn main() -> std::io::Result<()> {
     enable_raw_mode()?;
 
     // init the world
-    let slowness = 100;
+    let slowness = 60;
     let mut world = World::new(maxc, maxl);
 
     // show welcoming banner

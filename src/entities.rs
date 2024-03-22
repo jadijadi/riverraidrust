@@ -10,7 +10,6 @@ pub enum PlayerStatus {
     Dead(DeathCause),
     Alive,
     Quit,
-    Paused,
 }
 
 pub enum EntityStatus {

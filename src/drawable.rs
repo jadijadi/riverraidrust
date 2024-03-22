@@ -1,57 +1,49 @@
-use std::io::Stdout;
-
 use crate::{
+    canvas::Canvas,
     entities::{Bullet, Enemy, EntityStatus, Fuel, Player},
-    stout_ext::StdoutExt,
 };
 
 pub trait Drawable {
-    fn draw(&self, sc: &mut Stdout) -> Result<(), std::io::Error>;
+    fn draw(&self, sc: &mut Canvas);
 }
 
 impl Drawable for Enemy {
-    fn draw(&self, sc: &mut Stdout) -> Result<(), std::io::Error> {
+    fn draw(&self, sc: &mut Canvas) {
         match self.status {
             EntityStatus::Alive => {
-                sc.draw(self, "E")?;
+                sc.draw_char(self, 'E');
             }
             EntityStatus::DeadBody => {
-                sc.draw(self, "X")?;
+                sc.draw_char(self, 'X');
             }
             EntityStatus::Dead => {}
         };
-
-        Ok(())
     }
 }
 
 impl Drawable for Fuel {
-    fn draw(&self, sc: &mut Stdout) -> Result<(), std::io::Error> {
+    fn draw(&self, sc: &mut Canvas) {
         match self.status {
             EntityStatus::Alive => {
-                sc.draw(self, "F")?;
+                sc.draw_char(self, 'F');
             }
             EntityStatus::DeadBody => {
-                sc.draw(self, "$")?;
+                sc.draw_char(self, '$');
             }
             EntityStatus::Dead => {}
         };
-
-        Ok(())
     }
 }
 
 impl Drawable for Bullet {
-    fn draw(&self, sc: &mut Stdout) -> Result<(), std::io::Error> {
-        sc.draw(self, "|")?
-            .draw((self.location.c, self.location.l - 1), "^")?;
-        Ok(())
+    fn draw(&self, sc: &mut Canvas) {
+        sc.draw_char(self, '|')
+            .draw_char((self.location.c, self.location.l - 1), '^');
     }
 }
 
 impl Drawable for Player {
-    fn draw(&self, sc: &mut Stdout) -> Result<(), std::io::Error> {
-        sc.draw(self, "P")?;
-        Ok(())
+    fn draw(&self, sc: &mut Canvas) {
+        sc.draw_char(self, 'P');
     }
 }

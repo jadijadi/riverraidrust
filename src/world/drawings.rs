@@ -7,7 +7,6 @@ use std::{
 use crossterm::event::{poll, read};
 
 use crate::{
-    drawable::Drawable,
     entities::{DeathCause, PlayerStatus},
     stout_ext::StdoutExt,
     World,
@@ -21,61 +20,53 @@ impl World {
         stdout.clear_all()
     }
 
-    pub(super) fn draw(
-        &self, // draw function should not change world's state
-        stdout: &mut Stdout,
-    ) -> std::io::Result<()> {
-        self.clear_screen(stdout)?;
+    pub(super) fn draw_on_canvas(&mut self) {
+        self.canvas.clear_all();
 
         // draw the map
         for l in 0..self.map.len() {
-            stdout
-                .draw((0, l as u16), "+".repeat(self.map[l].0 as usize))?
-                .draw(
-                    (self.map[l].1, l as u16),
-                    "+".repeat((self.maxc - self.map[l].1) as usize),
-                )?;
+            let map_c = self.map[l].1;
+            let maxc = self.maxc;
+            self.canvas
+                .draw_line((0, l as u16), "+".repeat(self.map[l].0 as usize))
+                .draw_line((map_c, l as u16), "+".repeat((maxc - map_c) as usize));
         }
 
-        stdout
-            .draw(2, format!(" Score: {} ", self.player.score))?
-            .draw((2, 3), format!(" Fuel: {} ", self.player.gas / 100))?
-            .draw((2, 4), format!(" Enemies: {} ", self.enemies.len()))?;
+        let gas_present = self.player.gas / 100;
+        let enemies_count = self.enemies.len();
+        self.canvas
+            .draw_line(2, format!(" Score: {} ", self.player.score))
+            .draw_line((2, 3), format!(" Fuel: {} ", gas_present))
+            .draw_line((2, 4), format!(" Enemies: {} ", enemies_count));
 
         // draw fuel
         for fuel in self.fuels.iter() {
-            fuel.draw(stdout)?;
+            self.canvas.draw(fuel);
         }
 
         // draw enemies
         for enemy in self.enemies.iter() {
-            enemy.draw(stdout)?;
+            self.canvas.draw(enemy);
         }
 
         // draw bullet
         for bullet in &self.bullets {
-            bullet.draw(stdout)?;
+            self.canvas.draw(bullet);
         }
 
         // draw the player
-        self.player.draw(stdout)?;
-
-        // Flush everything to the screen.
-        stdout.flush()?;
-
-        Ok(())
+        self.canvas.draw(&self.player);
     }
 
-    pub(super) fn pause_screen(&self, stdout: &mut Stdout) -> Result<(), std::io::Error> {
+    pub(super) fn pause_screen(&mut self) {
         let pause_msg1: &str = "╔═══════════╗";
         let pause_msg2: &str = "║Game Paused║";
         let pause_msg3: &str = "╚═══════════╝";
 
-        stdout
-            .draw((self.maxc / 2 - 6, self.maxl / 2 - 1), pause_msg1)?
-            .draw((self.maxc / 2 - 6, self.maxl / 2), pause_msg2)?
-            .draw((self.maxc / 2 - 6, self.maxl / 2 + 1), pause_msg3)?
-            .flush()
+        self.canvas
+            .draw_line((self.maxc / 2 - 6, self.maxl / 2 - 1), pause_msg1)
+            .draw_line((self.maxc / 2 - 6, self.maxl / 2), pause_msg2)
+            .draw_line((self.maxc / 2 - 6, self.maxl / 2 + 1), pause_msg3);
     }
 
     pub fn welcome_screen(&self, stdout: &mut Stdout) -> Result<(), std::io::Error> {
@@ -136,7 +127,10 @@ impl World {
                 }
             }
         } else {
-            unreachable!("Undead player has no death cause!")
+            // Quit
+            if self.player.status != PlayerStatus::Quit {
+                unreachable!("Undead player has no death cause!")
+            }
         }
 
         stdout.move_cursor((2, self.maxl - 2))?;
