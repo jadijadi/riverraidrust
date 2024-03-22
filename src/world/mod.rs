@@ -11,8 +11,14 @@ use crate::{
 mod drawings;
 mod physics;
 
+pub enum WorldStatus {
+    Fluent,
+    Paused,
+}
+
 pub struct World {
     canvas: Canvas,
+    pub status: WorldStatus,
     pub player: Player,
     pub map: VecDeque<(u16, u16)>,
     pub maxc: u16,
@@ -28,6 +34,7 @@ pub struct World {
 impl World {
     pub fn new(maxc: u16, maxl: u16) -> World {
         World {
+            status: WorldStatus::Fluent,
             canvas: Canvas::new(maxc, maxl),
             player: Player {
                 location: Location::new(maxc / 2, maxl - 1),
@@ -48,15 +55,14 @@ impl World {
     }
 
     pub fn game_loop(&mut self, stdout: &mut Stdout, slowness: u64) -> Result<(), std::io::Error> {
-        while self.player.status == PlayerStatus::Alive
-            || self.player.status == PlayerStatus::Paused
-        {
+        while self.player.status == PlayerStatus::Alive {
             handle_pressed_keys(self);
-            if self.player.status != PlayerStatus::Paused {
-                self.physics();
-                self.draw_on_canvas();
-            } else {
-                self.pause_screen();
+            match self.status {
+                WorldStatus::Fluent => {
+                    self.physics();
+                    self.draw_on_canvas();
+                }
+                WorldStatus::Paused => self.pause_screen(),
             }
 
             self.canvas.draw_map(stdout)?;

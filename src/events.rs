@@ -1,4 +1,4 @@
-use crossterm::event::{poll, read, Event, KeyCode};
+use crossterm::event::{poll, read, Event, KeyCode, KeyEventKind};
 
 use std::time::Duration;
 
@@ -72,12 +72,12 @@ pub fn handle_pressed_keys(world: &mut World) {
                             world.player.location.c += 1
                         }
                     }
-                    KeyCode::Char('p') => {
-                        if world.player.status == PlayerStatus::Alive {
-                            world.player.status = PlayerStatus::Paused;
-                        } else if world.player.status == PlayerStatus::Paused {
-                            world.player.status = PlayerStatus::Alive;
-                        }
+                    KeyCode::Char('p') if event.kind == KeyEventKind::Press => {
+                        use crate::WorldStatus::*;
+                        world.status = match world.status {
+                            Fluent => Paused,
+                            Paused => Fluent,
+                        };
                     }
                     KeyCode::Char(' ') => {
                         if world.player.status == PlayerStatus::Alive && world.bullets.is_empty() {
