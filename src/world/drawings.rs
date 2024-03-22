@@ -127,7 +127,10 @@ impl World {
                 }
             }
         } else {
-            unreachable!("Undead player has no death cause!")
+            // Quit
+            if self.player.status != PlayerStatus::Quit {
+                unreachable!("Undead player has no death cause!")
+            }
         }
 
         stdout.move_cursor((2, self.maxl - 2))?;
