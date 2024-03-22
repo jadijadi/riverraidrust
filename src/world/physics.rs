@@ -83,6 +83,7 @@ impl World {
         if self.next_right.abs_diff(self.next_left) < 3 {
             self.next_right += 3;
         }
+
         self.map.push_front((left, right))
     }
 

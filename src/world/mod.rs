@@ -3,6 +3,7 @@ use std::{collections::VecDeque, io::Stdout, thread, time::Duration};
 use rand::{rngs::ThreadRng, thread_rng};
 
 use crate::{
+    canvas::Canvas,
     entities::{Bullet, Enemy, Fuel, Location, Player, PlayerStatus},
     handle_pressed_keys,
 };
@@ -11,6 +12,7 @@ mod drawings;
 mod physics;
 
 pub struct World {
+    canvas: Canvas,
     pub player: Player,
     pub map: VecDeque<(u16, u16)>,
     pub maxc: u16,
@@ -26,6 +28,7 @@ pub struct World {
 impl World {
     pub fn new(maxc: u16, maxl: u16) -> World {
         World {
+            canvas: Canvas::new(maxc, maxl),
             player: Player {
                 location: Location::new(maxc / 2, maxl - 1),
                 status: PlayerStatus::Alive,
@@ -51,10 +54,12 @@ impl World {
             handle_pressed_keys(self);
             if self.player.status != PlayerStatus::Paused {
                 self.physics();
-                self.draw(stdout)?;
+                self.draw_on_canvas();
             } else {
-                self.pause_screen(stdout)?;
+                self.pause_screen();
             }
+
+            self.canvas.draw_map(stdout)?;
             thread::sleep(Duration::from_millis(slowness));
         }
 
