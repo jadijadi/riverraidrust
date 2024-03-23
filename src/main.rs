@@ -81,7 +81,7 @@ fn main() -> std::io::Result<()> {
         handle_pressed_keys(&mut world);
         if world.status != PlayerStatus::Paused {
             physics(&mut world);
-            draw(&mut world, &mut sc)
+            draw(&mut world, &mut sc);
         } else {
             pause_screen(&sc, &world);
         }
