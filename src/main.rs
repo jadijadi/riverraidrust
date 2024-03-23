@@ -1,5 +1,5 @@
 use rand:: thread_rng;
-use std::io::stdout;
+use std::io::{stdout , Stdout, Write};
 use std::{thread, time};
 
 use crossterm::{
@@ -9,12 +9,14 @@ use crossterm::{
 };
 
 mod physics;
+mod draw;
 mod world;
 mod greeting;
 mod events;
 
 use world::world::{*};
 use physics::physics::{*};
+use draw::draw::{*};
 use greeting::greeting::{*};
 use events::events::{*};
 
@@ -48,6 +50,18 @@ fn physics(world: &mut World) {
     }
 }
 
+fn draw(world: &mut World , sc: &mut Stdout) {
+    sc.queue(Clear(crossterm::terminal::ClearType::All));
+
+    draw_map(world , sc);
+    draw_fuel(world , sc);
+
+    draw_enemies(world , sc);
+    draw_bullets(world , sc);
+
+    draw_player(world , sc);
+}
+
 
 fn main() -> std::io::Result<()> {
     // init the screen
@@ -67,14 +81,12 @@ fn main() -> std::io::Result<()> {
         handle_pressed_keys(&mut world);
         if world.status != PlayerStatus::Paused {
             physics(&mut world);
-            world.draw(&sc)?;
+            draw(&mut world, &mut sc)
         } else {
             pause_screen(&sc, &world);
         }
         thread::sleep(time::Duration::from_millis(slowness));
     }
-    
-    
 
     // game is finished
     sc.queue(Clear(crossterm::terminal::ClearType::All))?;

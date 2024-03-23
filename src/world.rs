@@ -1,16 +1,6 @@
 pub mod world {
-    use crossterm::{
-        cursor::MoveTo,
-        style::Print,
-        terminal::Clear,
-        QueueableCommand
-    };
-
-    use std::{
-        collections::VecDeque,
-        io::{Stdout, Write},
-    };
-
+    
+    use std::collections::VecDeque;
 
     #[derive(PartialEq, Eq)]
     pub enum PlayerStatus {
@@ -145,87 +135,5 @@ pub mod world {
                 death_cause: DeathCause::None,
             }
         }
-
-        pub fn draw(&mut self, mut sc: &Stdout) -> std::io::Result<()> {
-            sc.queue(Clear(crossterm::terminal::ClearType::All))?;
-        
-            // draw the map
-            for l in 0..self.map.len() {
-                sc.queue(MoveTo(0, l as u16))?
-                    .queue(Print("+".repeat(self.map[l].0 as usize)))?
-                    .queue(MoveTo(self.map[l].1, l as u16))?
-                    .queue(Print("+".repeat((self.maxc - self.map[l].1) as usize)))?;
-            }
-        
-            sc.queue(MoveTo(2, 2))?
-                .queue(Print(format!(" Score: {} ", self.score)))?
-                .queue(MoveTo(2, 3))?
-                .queue(Print(format!(" Fuel: {} ", self.gas / 100)))?;
-        
-            // draw fuel
-            for index in (0..self.fuel.len()).rev() {
-                match self.fuel[index].status {
-                    EnemyStatus::Alive => {
-                        sc.queue(MoveTo(
-                            self.fuel[index].location.c,
-                            self.fuel[index].location.l,
-                        ))?
-                        .queue(Print("F"))?;
-                    }
-                    EnemyStatus::DeadBody => {
-                        sc.queue(MoveTo(
-                            self.fuel[index].location.c,
-                            self.fuel[index].location.l,
-                        ))?
-                        .queue(Print("$"))?;
-                        self.fuel[index].status = EnemyStatus::Dead;
-                    }
-                    EnemyStatus::Dead => {
-                        self.fuel.remove(index);
-                    }
-                };
-            }
-        
-            // draw enemies
-            for index in (0..self.enemy.len()).rev() {
-                match self.enemy[index].status {
-                    EnemyStatus::Alive => {
-                        sc.queue(MoveTo(
-                            self.enemy[index].location.c,
-                            self.enemy[index].location.l,
-                        ))?
-                        .queue(Print("E"))?;
-                    }
-                    EnemyStatus::DeadBody => {
-                        sc.queue(MoveTo(
-                            self.enemy[index].location.c,
-                            self.enemy[index].location.l,
-                        ))?
-                        .queue(Print("X"))?;
-                        self.enemy[index].status = EnemyStatus::Dead;
-                    }
-                    EnemyStatus::Dead => {
-                        self.enemy.remove(index);
-                    }
-                };
-            }
-        
-            // draw bullet
-            for b in &self.bullet {
-                sc.queue(MoveTo(b.location.c, b.location.l))?
-                    .queue(Print("|"))?
-                    .queue(MoveTo(b.location.c, b.location.l - 1))?
-                    .queue(Print("^"))?;
-            }
-        
-            // draw the player
-            sc.queue(MoveTo(self.player_location.c, self.player_location.l))?
-                .queue(Print(self.ship.as_str()))?
-                .flush()?;
-        
-            Ok(())
-        }
-
-
     } // end of World implementation.
 }
