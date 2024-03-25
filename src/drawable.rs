@@ -30,7 +30,7 @@ impl Drawable for Fuel {
                 sc.draw_styled_char(self, 'F', ContentStyle::new().green().into());
             }
             EntityStatus::DeadBody => {
-                sc.draw_char(self, '$');
+                sc.draw_styled(self, '$'.yellow());
             }
             EntityStatus::Dead => {}
         };
@@ -46,6 +46,6 @@ impl Drawable for Bullet {
 
 impl Drawable for Player {
     fn draw(&self, sc: &mut Canvas) {
-        sc.draw_char(self, 'P');
+        sc.draw_styled(self, 'P'.blue());
     }
 }

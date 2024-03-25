@@ -25,7 +25,7 @@ impl Display for Block {
             Block::Empty => f.write_char(' '),
             Block::Acquired { style, character } => {
                 if let Some(style) = style {
-                    StyledContent::new(style.clone(), character).fmt(f)
+                    StyledContent::new(*style, character).fmt(f)
                 } else {
                     f.write_char(*character)
                 }
@@ -78,7 +78,7 @@ impl Canvas {
         let string: String = display.into();
 
         for (offset, ch) in string.chars().enumerate() {
-            self.acquire_block((c as usize) + offset, l as usize, ch, style.clone());
+            self.acquire_block((c as usize) + offset, l as usize, ch, style);
         }
 
         self
@@ -100,6 +100,15 @@ impl Canvas {
         self
     }
 
+    pub fn draw_styled<D: Display>(
+        &mut self,
+        loc: impl AsLocationTuple,
+        content: impl Into<StyledContent<D>>,
+    ) -> &mut Canvas {
+        let content: StyledContent<D> = content.into();
+        self.draw_styled_line(loc, content.content().to_string(), Some(*content.style()))
+    }
+
     pub fn clear_all(&mut self) -> &mut Canvas {
         self.table = (0..self.mac_l)
             .map(|_| (0..self.max_c).map(|_| Block::Empty).collect())
@@ -119,10 +128,6 @@ impl Canvas {
             character: new_char,
         };
     }
-
-    // pub fn clear_block(&mut self, c: usize, l: usize) {
-    //     self.table[l][c] = Block::Empty
-    // }
 
     fn detect_changes(&self) -> Vec<(usize, usize)> {
         let mut changes: Vec<(usize, usize)> = vec![];
