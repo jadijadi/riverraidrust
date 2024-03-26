@@ -3,6 +3,7 @@ use std::{
     thread,
     time::Duration,
 };
+use std::time::SystemTime;
 
 use crossterm::event::{poll, read};
 
@@ -34,10 +35,12 @@ impl World {
 
         let gas_present = self.player.gas / 100;
         let enemies_count = self.enemies.len();
+        let elapsed_time=SystemTime::now().duration_since(self.start).unwrap().as_secs()-self.pause_seconds;
         self.canvas
             .draw_line(2, format!(" Score: {} ", self.player.score))
             .draw_line((2, 3), format!(" Fuel: {} ", gas_present))
-            .draw_line((2, 4), format!(" Enemies: {} ", enemies_count));
+            .draw_line((2, 4), format!(" Enemies: {} ", enemies_count))
+            .draw_line((2, 5), format!(" Elapsed Time: {} ", elapsed_time));
 
         // draw fuel
         for fuel in self.fuels.iter() {
