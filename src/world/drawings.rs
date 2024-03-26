@@ -35,7 +35,7 @@ impl World {
                 .draw_line((map_c, l as u16), "+".repeat((maxc - map_c) as usize));
         }
 
-        let status_style = Some(ContentStyle::new().black().on_white());
+        let status_style = ContentStyle::new().black().on_white();
         let gas_present = self.player.gas / 100;
         let enemies_count = self.enemies.len();
         self.canvas
