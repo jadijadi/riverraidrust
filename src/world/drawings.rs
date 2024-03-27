@@ -31,8 +31,9 @@ impl World {
             let map_c = self.map[l].1;
             let maxc = self.maxc;
             self.canvas
-                .draw_line((0, l as u16), "+".repeat(self.map[l].0 as usize))
-                .draw_line((map_c, l as u16), "+".repeat((maxc - map_c) as usize));
+                .draw_styled_line((0, l as u16), " ".repeat(self.map[l].0 as usize), ContentStyle::new().on_green())
+                .draw_styled_line((self.map[l].0, l as u16), " ".repeat((self.map[l].1-self.map[l].0) as usize), ContentStyle::new().on_blue())
+                .draw_styled_line((map_c, l as u16), " ".repeat((maxc - map_c) as usize), ContentStyle::new().on_green());
         }
 
         let status_style = ContentStyle::new().black().on_white();
