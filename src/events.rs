@@ -19,59 +19,31 @@ pub fn handle_pressed_keys(world: &mut World) {
             Event::Key(event) => {
                 // I'm reading from keyboard into event
                 match event.code {
+                    KeyCode::Char('w') | KeyCode::Up
+                        if world.player.status == PlayerStatus::Alive
+                            && world.player.location.l > 1 =>
+                    {
+                        world.player.location.l -= 1
+                    }
+                    KeyCode::Char('s') | KeyCode::Down
+                        if world.player.status == PlayerStatus::Alive
+                            && world.player.location.l < world.maxl - 1 =>
+                    {
+                        world.player.location.l += 1
+                    }
+                    KeyCode::Char('a') | KeyCode::Left
+                        if world.player.status == PlayerStatus::Alive
+                            && world.player.location.c > 1 =>
+                    {
+                        world.player.location.c -= 1
+                    }
+                    KeyCode::Char('d') | KeyCode::Right
+                        if world.player.status == PlayerStatus::Alive
+                            && world.player.location.c < world.maxc - 1 =>
+                    {
+                        world.player.location.c += 1
+                    }
                     KeyCode::Char('q') => world.player.status = PlayerStatus::Quit,
-                    KeyCode::Char('w') => {
-                        if world.player.status == PlayerStatus::Alive && world.player.location.l > 1
-                        {
-                            world.player.location.l -= 1
-                        }
-                    }
-                    KeyCode::Char('s') => {
-                        if world.player.status == PlayerStatus::Alive
-                            && world.player.location.l < world.maxl - 1
-                        {
-                            world.player.location.l += 1
-                        }
-                    }
-                    KeyCode::Char('a') => {
-                        if world.player.status == PlayerStatus::Alive && world.player.location.c > 1
-                        {
-                            world.player.location.c -= 1
-                        }
-                    }
-                    KeyCode::Char('d') => {
-                        if world.player.status == PlayerStatus::Alive
-                            && world.player.location.c < world.maxc - 1
-                        {
-                            world.player.location.c += 1
-                        }
-                    }
-                    KeyCode::Up => {
-                        if world.player.status == PlayerStatus::Alive && world.player.location.l > 1
-                        {
-                            world.player.location.l -= 1
-                        }
-                    }
-                    KeyCode::Down => {
-                        if world.player.status == PlayerStatus::Alive
-                            && world.player.location.l < world.maxl - 1
-                        {
-                            world.player.location.l += 1
-                        }
-                    }
-                    KeyCode::Left => {
-                        if world.player.status == PlayerStatus::Alive && world.player.location.c > 1
-                        {
-                            world.player.location.c -= 1
-                        }
-                    }
-                    KeyCode::Right => {
-                        if world.player.status == PlayerStatus::Alive
-                            && world.player.location.c < world.maxc - 1
-                        {
-                            world.player.location.c += 1
-                        }
-                    }
                     KeyCode::Char('p') if event.kind == KeyEventKind::Press => {
                         use crate::WorldStatus::*;
                         world.status = match world.status {

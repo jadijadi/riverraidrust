@@ -5,7 +5,10 @@ use std::{
 };
 use std::time::SystemTime;
 
-use crossterm::event::{poll, read};
+use crossterm::{
+    event::{poll, read},
+    style::{ContentStyle, Stylize},
+};
 
 use crate::{
     entities::{DeathCause, PlayerStatus},
@@ -29,18 +32,24 @@ impl World {
             let map_c = self.map[l].1;
             let maxc = self.maxc;
             self.canvas
-                .draw_line((0, l as u16), "+".repeat(self.map[l].0 as usize))
-                .draw_line((map_c, l as u16), "+".repeat((maxc - map_c) as usize));
+                .draw_styled_line((0, l as u16), " ".repeat(self.map[l].0 as usize), ContentStyle::new().on_green())
+                .draw_styled_line((self.map[l].0, l as u16), " ".repeat((self.map[l].1-self.map[l].0) as usize), ContentStyle::new().on_blue())
+                .draw_styled_line((map_c, l as u16), " ".repeat((maxc - map_c) as usize), ContentStyle::new().on_green());
         }
 
+        let status_style = ContentStyle::new().black().on_white();
         let gas_present = self.player.gas / 100;
         let enemies_count = self.enemies.len();
         let elapsed_time=SystemTime::now().duration_since(self.start).unwrap().as_secs()-self.pause_seconds;
         self.canvas
-            .draw_line(2, format!(" Score: {} ", self.player.score))
-            .draw_line((2, 3), format!(" Fuel: {} ", gas_present))
-            .draw_line((2, 4), format!(" Enemies: {} ", enemies_count))
-            .draw_line((2, 5), format!(" Elapsed Time: {} ", elapsed_time));
+            .draw_styled_line(2, format!(" Score: {} ", self.player.score), status_style)
+            .draw_styled_line((2, 3), format!(" Fuel: {} ", gas_present), status_style)
+            .draw_styled_line(
+                (2, 4),
+                format!(" Enemies: {} ", enemies_count),
+                status_style,
+            );
+            .draw_styled_line((2, 5), format!(" Elapsed Time: {} ", elapsed_time, status_style));
 
         // draw fuel
         for fuel in self.fuels.iter() {
