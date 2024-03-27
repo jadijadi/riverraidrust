@@ -3,6 +3,7 @@ use std::{
     thread,
     time::Duration,
 };
+use std::time::SystemTime;
 
 use crossterm::{
     event::{poll, read},
@@ -39,6 +40,7 @@ impl World {
         let status_style = ContentStyle::new().black().on_white();
         let gas_present = self.player.gas / 100;
         let enemies_count = self.enemies.len();
+        let elapsed_time=SystemTime::now().duration_since(self.start).unwrap().as_secs()-self.pause_seconds;
         self.canvas
             .draw_styled_line(2, format!(" Score: {} ", self.player.score), status_style)
             .draw_styled_line((2, 3), format!(" Fuel: {} ", gas_present), status_style)
@@ -47,6 +49,7 @@ impl World {
                 format!(" Enemies: {} ", enemies_count),
                 status_style,
             );
+            .draw_styled_line((2, 5), format!(" Elapsed Time: {} ", elapsed_time, status_style));
 
         // draw fuel
         for fuel in self.fuels.iter() {

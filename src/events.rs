@@ -1,6 +1,6 @@
-use crossterm::event::{poll, read, Event, KeyCode, KeyEventKind};
+use std::time::{Duration, SystemTime};
 
-use std::time::Duration;
+use crossterm::event::{Event, KeyCode, KeyEventKind, poll, read};
 
 use crate::{
     entities::{Bullet, PlayerStatus},
@@ -47,8 +47,14 @@ pub fn handle_pressed_keys(world: &mut World) {
                     KeyCode::Char('p') if event.kind == KeyEventKind::Press => {
                         use crate::WorldStatus::*;
                         world.status = match world.status {
-                            Fluent => Paused,
-                            Paused => Fluent,
+                            Fluent => {
+                                world.last_pause_time = SystemTime::now();
+                                Paused
+                            }
+                            Paused => {
+                                world.pause_seconds += world.last_pause_time.elapsed().unwrap().as_secs();
+                                Fluent
+                            }
                         };
                     }
                     KeyCode::Char(' ') => {

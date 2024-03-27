@@ -1,4 +1,5 @@
 use std::{collections::VecDeque, io::Stdout, thread, time::Duration};
+use std::time::SystemTime;
 
 use rand::{rngs::ThreadRng, thread_rng};
 
@@ -29,10 +30,16 @@ pub struct World {
     pub fuels: Vec<Fuel>,
     pub bullets: Vec<Bullet>,
     pub rng: ThreadRng, // Local rng for the whole world
+
+    pub start: SystemTime,
+    pub last_pause_time: SystemTime,
+    pub pause_seconds: u64,
 }
 
 impl World {
     pub fn new(maxc: u16, maxl: u16) -> World {
+        let start_time = SystemTime::now();
+
         World {
             status: WorldStatus::Fluent,
             canvas: Canvas::new(maxc, maxl),
@@ -51,6 +58,10 @@ impl World {
             bullets: Vec::new(),
             fuels: Vec::new(),
             rng: thread_rng(),
+
+            start: start_time,
+            last_pause_time: start_time,
+            pause_seconds: 0,
         }
     }
 
