@@ -3,7 +3,7 @@ use crate::World;
 use rand::Rng;
 use std::num::Wrapping;
 
-use crate::entities::{DeathCause, Enemy, EntityStatus, Fuel, PlayerStatus};
+use crate::entities::{DeathCause, Enemy, EntityStatus, Fuel, PlayerStatus, GameMode};
 
 impl World {
     /// check if player hit the ground

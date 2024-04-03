@@ -4,7 +4,7 @@ use rand::{rngs::ThreadRng, thread_rng};
 
 use crate::{
     canvas::Canvas,
-    entities::{Bullet, Enemy, Fuel, Location, Player, PlayerStatus},
+    entities::{Bullet, Enemy, Fuel, Location, Player, PlayerStatus, GameMode},
     handle_pressed_keys,
 };
 
@@ -29,6 +29,7 @@ pub struct World {
     pub fuels: Vec<Fuel>,
     pub bullets: Vec<Bullet>,
     pub rng: ThreadRng, // Local rng for the whole world
+    pub game_mode: GameMode,
 }
 
 impl World {
@@ -36,12 +37,13 @@ impl World {
         World {
             status: WorldStatus::Fluent,
             canvas: Canvas::new(maxc, maxl),
+            game_mode: GameMode::Normal,
             player: Player {
                 location: Location::new(maxc / 2, maxl - 1),
                 status: PlayerStatus::Alive,
                 score: 0,
                 gas: 1700,
-            },
+            }, 
             map: VecDeque::from(vec![(maxc / 2 - 5, maxc / 2 + 5); maxl as usize]),
             maxc,
             maxl,
@@ -60,6 +62,14 @@ impl World {
             match self.status {
                 WorldStatus::Fluent => {
                     self.physics();
+                    match self.game_mode {
+                        GameMode::God => {
+                            if self.player.status != PlayerStatus::Quit {
+                                self.player.status = PlayerStatus::Alive;
+                            }
+                        }
+                        GameMode::Normal => {}
+                    }
                     self.draw_on_canvas();
                 }
                 WorldStatus::Paused => self.pause_screen(),

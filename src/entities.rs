@@ -18,6 +18,12 @@ pub enum EntityStatus {
     Dead,
 }
 
+#[derive(PartialEq, Eq)]
+pub enum GameMode {
+    Normal,
+    God,
+}
+
 #[derive(Clone)]
 pub struct Location {
     pub c: u16,

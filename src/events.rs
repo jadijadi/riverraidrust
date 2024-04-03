@@ -3,7 +3,7 @@ use crossterm::event::{poll, read, Event, KeyCode, KeyEventKind};
 use std::time::Duration;
 
 use crate::{
-    entities::{Bullet, PlayerStatus},
+    entities::{Bullet, PlayerStatus, GameMode},
     world::World,
 };
 
@@ -50,6 +50,13 @@ pub fn handle_pressed_keys(world: &mut World) {
                             Fluent => Paused,
                             Paused => Fluent,
                         };
+                    }
+                    KeyCode::Char('g') => {
+                        if world.game_mode == GameMode::Normal {
+                            world.game_mode = GameMode::God;
+                        } else if world.game_mode == GameMode::God {
+                            world.game_mode = GameMode::Normal;
+                        }
                     }
                     KeyCode::Char(' ') => {
                         if world.player.status == PlayerStatus::Alive && world.bullets.is_empty() {

@@ -10,7 +10,7 @@ use crossterm::{
 };
 
 use crate::{
-    entities::{DeathCause, PlayerStatus},
+    entities::{DeathCause, PlayerStatus, GameMode},
     stout_ext::StdoutExt,
     World,
 };
@@ -47,7 +47,10 @@ impl World {
                 format!(" Enemies: {} ", enemies_count),
                 status_style,
             );
-
+        
+        if self.game_mode == GameMode::God {
+            self.draw_god_mode();
+        }
         // draw fuel
         for fuel in self.fuels.iter() {
             self.canvas.draw(fuel);
@@ -155,5 +158,11 @@ impl World {
 
         self.clear_screen(stdout)?;
         Ok(())
+    }
+
+    pub fn draw_god_mode(&mut self) {
+        let msg: &str = " GOD MODE: ON ";
+        self.canvas
+            .draw_styled_line((2, 5), msg, ContentStyle::new().on_white().black());
     }
 }
