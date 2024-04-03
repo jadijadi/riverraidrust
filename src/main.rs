@@ -1,53 +1,21 @@
-use rand:: thread_rng;
 use std::io::stdout;
-use std::{thread, time};
+use stout_ext::StdoutExt;
 
 use crossterm::{
     cursor::{Hide, Show},
-    terminal::{disable_raw_mode, enable_raw_mode, size, Clear},
-    ExecutableCommand, QueueableCommand,
+    terminal::{disable_raw_mode, enable_raw_mode, size},
+    ExecutableCommand,
 };
 
-mod physics;
-mod world;
-mod greeting;
+mod canvas;
+mod drawable;
+mod entities;
 mod events;
+mod stout_ext;
+mod world;
 
-use world::world::{*};
-use physics::physics::{*};
-use greeting::greeting::{*};
-use events::events::{*};
-
-
-/// Game Physic Rules
-/// TODO: Move to Physics.rs module later
-fn physics(world: &mut World) {
-    let mut rng = thread_rng();
-
-    // check if player hit the ground
-    check_player_status(world);
-
-    // check enemy hit something
-    check_enemy_status(world);
-    check_fuel_status(world);
-
-    // move the map Downward
-    update_map(&mut rng, world);
-
-    // create new enemy
-    create_enemy(&mut rng, world);
-    create_fuel(&mut rng, world);
-
-    // Move elements along map movements
-    move_enemies(world);
-    move_fuel(world);
-    move_bullets(world);
-
-    if world.gas >= 1 {
-        world.gas -= 1;
-    }
-}
-
+use events::*;
+use world::*;
 
 fn main() -> std::io::Result<()> {
     // init the screen
@@ -57,38 +25,23 @@ fn main() -> std::io::Result<()> {
     enable_raw_mode()?;
 
     // init the world
-    let slowness = 100;
+    let slowness = 60;
     let mut world = World::new(maxc, maxl);
 
     // show welcoming banner
-    welcome_screen(&sc, &world);
+    world.welcome_screen(&mut sc)?;
 
-    while world.status == PlayerStatus::Alive || world.status == PlayerStatus::Paused {
-        handle_pressed_keys(&mut world);
-        if world.status != PlayerStatus::Paused {
-            physics(&mut world);
-            match world.game_mode {
-                GameMode::God => {
-                    if world.status != PlayerStatus::Quit {
-                        world.status = PlayerStatus::Alive;
-                    }
-                }
-                GameMode::Normal => {}
-            }
-            world.draw(&sc)?;
-        } else {
-            pause_screen(&sc, &world);
-        }
-        thread::sleep(time::Duration::from_millis(slowness));
-    }
-    
-    
+    // Main game loop
+    // - Events
+    // - Physics
+    // - Drawing
+    world.game_loop(&mut sc, slowness)?;
 
     // game is finished
-    sc.queue(Clear(crossterm::terminal::ClearType::All))?;
-    goodbye_screen(&sc, &world);
-    sc.queue(Clear(crossterm::terminal::ClearType::All))?
-        .execute(Show)?;
+    world.clear_screen(&mut sc)?;
+    world.goodbye_screen(&mut sc)?;
+
+    sc.clear_all()?.execute(Show)?;
     disable_raw_mode()?;
     Ok(())
 }
