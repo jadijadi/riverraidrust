@@ -20,7 +20,8 @@ pub enum Block {
 }
 
 impl Display for Block {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>)
+           -> std::fmt::Result {
         match self {
             Block::Empty => f.write_char(' '),
             Block::Acquired { style, character } => {
@@ -55,7 +56,8 @@ impl Canvas {
         }
     }
 
-    pub fn draw(&mut self, drawable: &impl Drawable) -> &mut Canvas {
+    pub fn draw(&mut self, drawable: &impl Drawable)
+                -> &mut Canvas {
         drawable.draw(self);
         self
     }
