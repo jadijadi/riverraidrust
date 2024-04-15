@@ -29,7 +29,8 @@ impl Location {
         Location { c, l }
     }
 
-    // Checks if two locations are within a specified margin of each other
+    // Checks if two locations are within a specified margin
+    // of each other
     pub fn hit_with_margin(
         &self,
         other: &Location,
@@ -56,9 +57,13 @@ pub struct Enemy {
 }
 
 impl Enemy {
-    pub fn new(column: u16, line: u16, status: EntityStatus) -> Enemy {
+    pub fn new(column: u16,
+               line: u16,
+               status: EntityStatus)
+               -> Enemy {
         Enemy {
-            location: Location::new(column, line),
+            location: Location::new(column,
+                                    line),
             status,
         }
     }
@@ -70,9 +75,13 @@ pub struct Bullet {
 }
 
 impl Bullet {
-    pub fn new(column: u16, line: u16, energy: u16) -> Bullet {
+    pub fn new(column: u16,
+               line: u16,
+               energy: u16)
+               -> Bullet {
         Bullet {
-            location: Location::new(column, line),
+            location: Location::new(column,
+                                    line),
             energy,
         }
     }
@@ -84,9 +93,13 @@ pub struct Fuel {
 }
 
 impl Fuel {
-    pub fn new(column: u16, line: u16, status: EntityStatus) -> Fuel {
+    pub fn new(column: u16,
+               line: u16,
+               status: EntityStatus)
+               -> Fuel {
         Fuel {
-            location: Location::new(column, line),
+            location: Location::new(column,
+                                    line),
             status,
         }
     }
