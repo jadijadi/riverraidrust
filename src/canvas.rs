@@ -78,13 +78,16 @@ impl Canvas {
         let string: String = display.into();
 
         for (offset, ch) in string.chars().enumerate() {
-            self.acquire_block((c as usize) + offset, l as usize, ch, style);
+            self.acquire_block((c as usize) + offset,
+                               l as usize,
+                               ch, style);
         }
-
         self
     }
 
-    pub fn draw_char(&mut self, loc: impl AsLocationTuple, display: char) -> &mut Canvas {
+    pub fn draw_char(&mut self,
+                     loc: impl AsLocationTuple,
+                     display: char) -> &mut Canvas {
         self.draw_styled_char(loc, display, None)
     }
 
@@ -95,8 +98,9 @@ impl Canvas {
         style: impl Into<Option<ContentStyle>>,
     ) -> &mut Canvas {
         let (c, l) = loc.as_loc_tuple();
-        self.acquire_block(c as usize, l as usize, display, style);
-
+        self.acquire_block(c as usize,
+                           l as usize,
+                           display, style);
         self
     }
 
@@ -106,7 +110,9 @@ impl Canvas {
         content: impl Into<StyledContent<D>>,
     ) -> &mut Canvas {
         let content: StyledContent<D> = content.into();
-        self.draw_styled_line(loc, content.content().to_string(), Some(*content.style()))
+        self.draw_styled_line(loc,
+                              content.content().to_string(),
+                              Some(*content.style()))
     }
 
     pub fn clear_all(&mut self) -> &mut Canvas {
@@ -142,7 +148,9 @@ impl Canvas {
         changes
     }
 
-    pub fn draw_map(&mut self, stdout: &mut Stdout) -> Result<(), std::io::Error> {
+    pub fn draw_map(&mut self,
+                    stdout: &mut Stdout)
+                    -> Result<(), std::io::Error> {
         for (c, l) in self.detect_changes() {
             let block = self.table[l][c].clone();
             stdout.draw((c as u16, l as u16), &block)?;
