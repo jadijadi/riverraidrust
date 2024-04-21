@@ -25,27 +25,42 @@ impl World {
 
     pub(super) fn draw_on_canvas(&mut self) {
         self.canvas.clear_all();
+        let lines = self.map.len();
 
         // draw the map
-        for l in 0..self.map.len() {
+        for l in 0..lines {
             let map_c = self.map[l].1;
             let maxc = self.maxc;
             self.canvas
-                .draw_styled_line((0, l as u16), " ".repeat(self.map[l].0 as usize), ContentStyle::new().on_green())
-                .draw_styled_line((self.map[l].0, l as u16), " ".repeat((self.map[l].1-self.map[l].0) as usize), ContentStyle::new().on_blue())
-                .draw_styled_line((map_c, l as u16), " ".repeat((maxc - map_c) as usize), ContentStyle::new().on_green());
+                .draw_styled_line((0, l as u16),
+                                  " ".repeat(self.map[l].0
+                                             as usize),
+                                  ContentStyle::new().on_green())
+                .draw_styled_line((self.map[l].0, l as u16),
+                                  " ".repeat((self.map[l].1 - self.map[l].0)
+                                             as usize),
+                                  ContentStyle::new().on_blue())
+                .draw_styled_line((map_c, l as u16),
+                                  " ".repeat((maxc - map_c)
+                                             as usize),
+                                  ContentStyle::new().on_green());
         }
 
         let status_style = ContentStyle::new().black().on_white();
         let gas_present = self.player.gas / 100;
         let enemies_count = self.enemies.len();
+
+        //// draw status information
+        // line at the bottom:
+        // (XXX map lines should be so decremented)
+        // (XXX initial boat position at least one line higher)
         self.canvas
-            .draw_styled_line(2, format!(" Score: {} ", self.player.score), status_style)
-            .draw_styled_line((2, 3), format!(" Fuel: {} ", gas_present), status_style)
-            .draw_styled_line(
-                (2, 4),
-                format!(" Enemies: {} ", enemies_count),
-                status_style,
+            .draw_styled_line((0, lines as u16 - 1),
+                              format!("[ Score: {} | Fuel: {} | Enemies: {} ]",
+                                      self.player.score,
+                                      gas_present,
+                                      enemies_count),
+                              status_style,
             );
 
         // draw fuel
@@ -68,13 +83,13 @@ impl World {
     }
 
     pub(super) fn pause_screen(&mut self) {
-        let pause_msg1: &str = "╔═══════════╗";
-        let pause_msg2: &str = "║Game Paused║";
-        let pause_msg3: &str = "╚═══════════╝";
+        let pause_msg1: &str = "╔═════════════╗";
+        let pause_msg2: &str = "║ Game Paused ║";
+        let pause_msg3: &str = "╚═════════════╝";
 
         self.canvas
             .draw_line((self.maxc / 2 - 6, self.maxl / 2 - 1), pause_msg1)
-            .draw_line((self.maxc / 2 - 6, self.maxl / 2), pause_msg2)
+            .draw_line((self.maxc / 2 - 6, self.maxl / 2),     pause_msg2)
             .draw_line((self.maxc / 2 - 6, self.maxl / 2 + 1), pause_msg3);
     }
 
