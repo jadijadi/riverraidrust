@@ -25,7 +25,7 @@ fn main() -> std::io::Result<()> {
     enable_raw_mode()?;
 
     // init the world
-    let slowness = 60;
+    let slowness = 60; // XXX oh, issue #85 was just solved here before...
     let mut world = World::new(maxc, maxl);
 
     // show welcoming banner
@@ -43,5 +43,6 @@ fn main() -> std::io::Result<()> {
 
     sc.clear_all()?.execute(Show)?;
     disable_raw_mode()?;
+    println!(""); // XXX ??? no "%" at the end of the program
     Ok(())
 }
